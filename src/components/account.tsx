@@ -2,8 +2,8 @@ import { FallbackProvider, JsonRpcProvider } from "ethers";
 import {
   useAccount,
   useChainId,
+  useDeployContract,
   useDisconnect,
-  useEnsAvatar,
   useEnsName,
 } from "wagmi";
 import { Button } from "./ui/button";
@@ -14,6 +14,8 @@ import { useEffect, useState } from "react";
 import { getInstance, provider, getTokenSignature } from "@/utils/fhevm";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import eventABI from "@/abi/eventABI.json";
+import { byteCode } from "@/utils/byteCode";
 
 let instance;
 export function Account() {
@@ -21,6 +23,7 @@ export function Account() {
   const { disconnect } = useDisconnect();
   const { data: ensName } = useEnsName({ address });
   const chainId = useChainId();
+  const { deployContract } = useDeployContract();
   const [formValues, setFormValues] = useState({
     formAddress: "",
     uri: "",
@@ -56,6 +59,16 @@ export function Account() {
     { id: "evtEndTime", label: "Event End Time" },
     { id: "evtTokenSupply", label: "Event Token Supply" },
   ];
+
+  const handleFormSubmit = () => {
+    const formArray = Object.keys(formValues).map((key) => formValues[key]);
+    console.log(formArray);
+    deployContract({
+      abi: eventABI,
+      args: formArray,
+      bytecode: byteCode,
+    });
+  };
 
   useEffect(() => {
     async function fetchInstance() {
@@ -115,6 +128,9 @@ export function Account() {
             <Input id={id} onChange={handleChange} value={formValues[id]} />
           </div>
         ))}
+      </div>
+      <div className="flex items-center justify-end">
+        <Button onClick={handleFormSubmit}>Submit</Button>
       </div>
     </div>
   );
