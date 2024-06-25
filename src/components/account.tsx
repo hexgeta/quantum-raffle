@@ -60,12 +60,25 @@ export function Account() {
     { id: "evtTokenSupply", label: "Event Token Supply" },
   ];
 
-  const handleFormSubmit = () => {
-    const formArray = Object.keys(formValues).map((key) => formValues[key]);
-    console.log(formArray);
-    deployContract({
+  const handleFormSubmit = async () => {
+    const data = [
+      formValues.formAddress,
+      formValues.uri,
+      formValues.name,
+      {
+        price: formValues.tokenPrice,
+        currency: formValues.tokenPrice,
+        currencyAddress: formValues.tokenAddress,
+      },
+      formValues.evtDescription,
+      formValues.evtLocation,
+      formValues.evtStartTime,
+      formValues.evtEndTime,
+      formValues.evtTokenSupply,
+    ];
+    const contract = await deployContract({
       abi: eventABI,
-      args: formArray,
+      args: data,
       bytecode: byteCode,
     });
   };
