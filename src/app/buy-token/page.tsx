@@ -3,12 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import React, { useState } from "react";
-import { useWriteContract } from "wagmi";
-import ERC20ABI from "@/abi/ERC20ABI.json";
+import { useAccount, useWriteContract } from "wagmi";
+import { abi } from "@/abi/ERC20ABI";
 import { getInstance } from "@/utils/fhevm";
 import { toHexString } from "@/utils/utils";
+import { writeContract } from "wagmi/actions";
+import { config } from "@/wagmiProvider/config";
 const Page = () => {
-  const { data: hash, writeContract } = useWriteContract();
+  // const { data: hash, writeContract } = useWriteContract();
+  const { address } = useAccount();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [formValues, setFormValues] = useState({
     erc20ContractAddress: "0x71ecd860e7e6E816427D5936d95d3456F3860d91",
@@ -39,23 +42,14 @@ const Page = () => {
     const instance = await getInstance();
     const encryptedString = await instance.encrypt32(400000000);
     const hexString = "0x" + toHexString(encryptedString);
-    console.log(hexString)
-    writeContract(
-      {
-        address: formValues.erc20ContractAddress,
-        ERC20ABI,
-        functionName: "mintAndApprove",
-        args: [formValues.eventContractAddress, hexString],
-      },
-      {
-        onSuccess(data, variables, context) {
-          console.log(data);
-        },
-        onError(error, variables, context) {
-          console.log(error);
-        },
-      }
-    );
+    console.log(hexString);
+    const result = await writeContract(config, {
+      abi,
+      address,
+      functionName: "mintAndApprove",
+      args: [formValues.eventContractAddress, hexString],
+    });
+    console.log(result);
   };
 
   const buyEventTickets = () => {};
