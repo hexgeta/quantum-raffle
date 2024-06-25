@@ -16,7 +16,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import eventABI from "@/abi/eventABI.json";
 import { byteCode } from "@/utils/byteCode";
-import AlertDialouge from "@/components/alert-dialouge";
+import AlertDialouge from "./alert-dialouge";
 import Link from "next/link";
 
 let instance;
@@ -40,8 +40,8 @@ export function Account() {
     evtEndTime: "1721775965",
     evtTokenSupply: "200",
   });
-  const [responseAddress, setResponseAddress] = useState("");
-  const [alertDialouge, setAlertDialouge] = useState(false);
+  const [responseAddress, setResponseAddress] = useState("0x6c83364249513a353236be9f274d216e58438e28015e1b0cc7fac2e40d05e3f3");
+  const [alertDialouge, setAlertDialouge] = useState(true);
   const handleChange = (e: any) => {
     const { id, value } = e.target;
     setFormValues((prevValues) => ({

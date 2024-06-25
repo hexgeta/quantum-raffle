@@ -11,7 +11,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "./ui/use-toast";
 
-const AlertDialouge = ({ address, isOpen, setIsOpen }) => {
+type AlertDialogProps = {
+  address: string;
+  isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
+};
+const AlertDialouge: React.FC<AlertDialogProps> = ({
+  address,
+  isOpen,
+  setIsOpen,
+}) => {
   const { toast } = useToast();
   const copyAddress = (e) => {
     e.preventDefault();
@@ -26,14 +35,17 @@ const AlertDialouge = ({ address, isOpen, setIsOpen }) => {
       description: "Address, copied to clipboard",
     });
   };
+  function truncateAddress(address: string) {
+    return address.slice(0, 10) + "....." + address.slice(-4);
+  }
   return (
     <AlertDialog open={isOpen} onOpenChange={(e) => setIsOpen(e)}>
       <AlertDialogContent className="">
         <AlertDialogHeader>
-          <AlertDialogTitle>Copy the contract address</AlertDialogTitle>
+          <AlertDialogTitle>Copy Address</AlertDialogTitle>
           <AlertDialogDescription>
-            <div className="mt-10 flex flex-wrap justify-between scroll-m-20 border-b pb-6  font-semibold tracking-tight transition-colors first:mt-0 text-wrap">
-              <p>{address}</p>
+            <div className="mt-10 flex flex-wrap text-black/75 text-xl justify-between scroll-m-20 border-b pb-6  font-semibold max-w-md overflow-auto tracking-tight transition-colors first:mt-0 text-wrap">
+              <p>{truncateAddress(address)}</p>
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
