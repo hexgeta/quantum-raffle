@@ -6,7 +6,7 @@ export const incoNetwork = {
   name: "Inco Gentry Testnet",
   nativeCurrency: { name: "INCO", symbol: "INCO", decimals: 18 },
   rpcUrls: {
-    default: { http: ["https://testnet.inco.org"] },
+    default: { http: ["https://testnet.inco.org/"] },
   },
   blockExplorers: {
     default: {

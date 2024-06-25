@@ -4,16 +4,12 @@ import { incoNetwork } from "./chainConfig";
 import { sepolia } from "viem/chains";
 
 export const config = createConfig({
-  chains: [sepolia, incoNetwork],
+  chains: [incoNetwork],
   ssr: true,
-  connectors: [
-    injected(),
-    walletConnect({ projectId: process.env.WALLET_CONNECT_PROJECT_ID }),
-    metaMask(),
-    safe(),
-  ],
+  connectors: [injected(), metaMask()],
   transports: {
-    // [mainnet.id]: http(),
-    [sepolia.id]: http(),
+    [incoNetwork.id]: http("https://testnet.inco.org/"),
+    // [sepolia.id]: http("https://eth-sepolia.g.alchemy.com/v2/..."),
+    // [sepolia.id]: http(),
   },
 });

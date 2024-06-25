@@ -16,6 +16,8 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import eventABI from "@/abi/eventABI.json";
 import { byteCode } from "@/utils/byteCode";
+import AlertDialouge from "@/components/alert-dialouge";
+import Link from "next/link";
 
 let instance;
 export function Account() {
@@ -38,7 +40,8 @@ export function Account() {
     evtEndTime: "1721775965",
     evtTokenSupply: "200",
   });
-
+  const [responseAddress, setResponseAddress] = useState("");
+  const [alertDialouge, setAlertDialouge] = useState(false);
   const handleChange = (e: any) => {
     const { id, value } = e.target;
     setFormValues((prevValues) => ({
@@ -76,7 +79,7 @@ export function Account() {
       formValues.evtStartTime,
       formValues.evtEndTime,
       formValues.evtTokenSupply,
-    ];  
+    ];
     deployContract(
       {
         abi: eventABI,
@@ -86,6 +89,8 @@ export function Account() {
       {
         onSuccess(data, variables, context) {
           console.log(data);
+          setResponseAddress(data);
+          setAlertDialouge(true);
         },
         onError(error, variables, context) {
           console.log(error);
@@ -120,7 +125,14 @@ export function Account() {
   };
 
   return (
-    <div className="mt-20 grid gap-6">
+    <div className="mt-20 grid gap-6 pb-16">
+      {responseAddress !== "" && (
+        <AlertDialouge
+          isOpen={alertDialouge}
+          address={responseAddress}
+          setIsOpen={setAlertDialouge}
+        />
+      )}
       <div className="mt-10 flex justify-between scroll-m-20 border-b pb-6 text-3xl font-semibold tracking-tight transition-colors first:mt-0">
         <div>
           Wallet Address:{" "}
@@ -136,7 +148,11 @@ export function Account() {
           )}
         </div>
         {chainId === 9090 ? (
-          <div>
+          <div className="flex gap-4 items-center">
+            <Link href={"/buy-token"}>
+              <Button variant={"neutral"}>Buy Token</Button>
+            </Link>
+
             <Button onClick={() => disconnect()}>Disconnect</Button>
           </div>
         ) : (
@@ -149,7 +165,12 @@ export function Account() {
         {formFields.map(({ id, label }) => (
           <div key={id} className="grid gap-2 md:grid-cols-2 items-center">
             <Label htmlFor={id}>{label}</Label>
-            <Input id={id} onChange={handleChange} value={formValues[id]} />
+            <Input
+              id={id}
+              onChange={handleChange}
+              value={formValues[id]}
+              placeholder={label}
+            />
           </div>
         ))}
       </div>
