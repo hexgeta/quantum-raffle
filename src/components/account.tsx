@@ -31,7 +31,8 @@ export function Account() {
     tokenPrice: "400000000",
     tokenName: "usdc",
     tokenAddress: "0x71ecd860e7e6E816427D5936d95d3456F3860d91",
-    evtDescription: "All you can crytpo, free drinks with this NFT. Hang out with the ATX DAO",
+    evtDescription:
+      "All you can crytpo, free drinks with this NFT. Hang out with the ATX DAO",
     evtLocation: "Native Bar",
     evtStartTime: "1721774965",
     evtEndTime: "1721775965",
@@ -75,12 +76,22 @@ export function Account() {
       formValues.evtStartTime,
       formValues.evtEndTime,
       formValues.evtTokenSupply,
-    ];
-    const contract = await deployContract({
-      abi: eventABI,
-      args: data,
-      bytecode: byteCode,
-    });
+    ];  
+    deployContract(
+      {
+        abi: eventABI,
+        args: data,
+        bytecode: byteCode,
+      },
+      {
+        onSuccess(data, variables, context) {
+          console.log(data);
+        },
+        onError(error, variables, context) {
+          console.log(error);
+        },
+      }
+    );
   };
 
   useEffect(() => {
