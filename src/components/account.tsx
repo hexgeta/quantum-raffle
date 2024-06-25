@@ -29,7 +29,7 @@ export function Account() {
     uri: "https://blocklive.io/metadata/collection",
     name: "ATX DAO Native 8/8/22",
     tokenPrice: "400000000",
-    tokenName: "ATX DAO Native 8/8/22",
+    tokenName: "usdc",
     tokenAddress: "0x71ecd860e7e6E816427D5936d95d3456F3860d91",
     evtDescription: "All you can crytpo, free drinks with this NFT. Hang out with the ATX DAO",
     evtLocation: "Native Bar",
