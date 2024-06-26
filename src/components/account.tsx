@@ -7,17 +7,18 @@ import {
   useEnsName,
 } from "wagmi";
 import { Button } from "./ui/button";
-import { switchChain } from "wagmi/actions";
+import { getTransactionCount, switchChain } from "wagmi/actions";
 import { config } from "@/wagmiProvider/config";
 import { incoNetwork } from "@/wagmiProvider/chainConfig";
 import { useEffect, useState } from "react";
 import { getInstance, provider, getTokenSignature } from "@/utils/fhevm";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import eventABI from "@/abi/eventABI.json";
 import { byteCode } from "@/utils/byteCode";
 import AlertDialouge from "./alert-dialouge";
 import Link from "next/link";
+import { eventABI } from "@/abi/EventABI";
+import { getContractAddress } from "viem";
 
 let instance;
 export function Account() {
@@ -30,15 +31,15 @@ export function Account() {
     formAddress: address,
     uri: "https://blocklive.io/metadata/collection",
     name: "ATX DAO Native 8/8/22",
-    tokenPrice: "400000000",
+    tokenPrice: 400000000,
     tokenName: "usdc",
-    tokenAddress: "0x71ecd860e7e6E816427D5936d95d3456F3860d91",
+    tokenAddress: "",
     evtDescription:
       "All you can crytpo, free drinks with this NFT. Hang out with the ATX DAO",
     evtLocation: "Native Bar",
-    evtStartTime: "1721774965",
-    evtEndTime: "1721775965",
-    evtTokenSupply: "200",
+    evtStartTime: 1721774965,
+    evtEndTime: 1721775965,
+    evtTokenSupply: 200,
   });
   const [responseAddress, setResponseAddress] = useState("");
   const [alertDialouge, setAlertDialouge] = useState(false);
@@ -64,15 +65,30 @@ export function Account() {
     { id: "evtTokenSupply", label: "Event Token Supply" },
   ];
 
+  const getContractAddressFunction = async () => {
+    const transactionCount = await getTransactionCount(config, {
+      address: address,
+    });
+    const contractAddress = await getContractAddress({
+      from: address,
+      nonce: transactionCount,
+    });
+    setResponseAddress(contractAddress);
+    setAlertDialouge(true);
+  };
+
   const handleFormSubmit = async () => {
     const data = [
       formValues.formAddress,
       formValues.uri,
       formValues.name,
       {
-        price: formValues.tokenPrice,
-        currency: formValues.tokenPrice,
+        price: 400000000,
+        currency: "usdc",
         currencyAddress: formValues.tokenAddress,
+        // price: formValues.tokenPrice,
+        // currency: formValues.tokenName,
+        // currencyAddress: formValues.tokenAddress,
       },
       formValues.evtDescription,
       formValues.evtLocation,
@@ -89,11 +105,13 @@ export function Account() {
       {
         onSuccess(data, variables, context) {
           console.log(data);
-          setResponseAddress(data);
-          setAlertDialouge(true);
+          getContractAddressFunction();
         },
         onError(error, variables, context) {
           console.log(error);
+        },
+        onSettled(data, error, variables, context) {
+          console.log(data);
         },
       }
     );

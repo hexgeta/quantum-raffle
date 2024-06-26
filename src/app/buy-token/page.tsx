@@ -3,20 +3,36 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import React, { useState } from "react";
-import { useAccount, useWriteContract } from "wagmi";
-import { abi } from "@/abi/ERC20ABI";
+import { useAccount } from "wagmi";
+import { abi as erc20ABI } from "@/abi/ERC20ABI";
 import { getInstance } from "@/utils/fhevm";
 import { toHexString } from "@/utils/utils";
-import { writeContract } from "wagmi/actions";
+import { readContract, watchContractEvent, writeContract } from "wagmi/actions";
 import { config } from "@/wagmiProvider/config";
+import { useToast } from "@/components/ui/use-toast";
+import { eventABI } from "@/abi/EventABI";
+import TicketPopup from "@/components/ticket-popup";
+const sampleData = {
+  creator: "0x1234567890abcdef1234567890abcdef12345678",
+  nameContract: "Concert",
+  eventDescription: "A live music concert featuring top artists.",
+  location: "Madison Square Garden, NY",
+  eventStartTime: 1711113600, // Example Unix timestamp for start time
+  eventEndTime: 1711128000, // Example Unix timestamp for end time
+  ticketPrice: 100,
+  ticketCounter: 99,
+};
+
 const Page = () => {
-  // const { data: hash, writeContract } = useWriteContract();
   const { address } = useAccount();
+  const [isOpen, setIsOpen] = useState(false);
+  const { toast } = useToast();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [formValues, setFormValues] = useState({
-    erc20ContractAddress: "0x71ecd860e7e6E816427D5936d95d3456F3860d91",
-    eventContractAddress: "0x71ecd860e7e6E816427D5936d95d3456F3860d91",
+    erc20ContractAddress: "",
+    eventContractAddress: "",
   });
+  const [data, setData] = useState(sampleData);
   const formFields = [
     { id: "erc20ContractAddress", label: "ERC Contract Address" },
     { id: "eventContractAddress", label: "Event Contract Address" },
@@ -39,23 +55,86 @@ const Page = () => {
   };
 
   const getERC20Tokens = async () => {
-    const instance = await getInstance();
-    const encryptedString = await instance.encrypt32(400000000);
-    const hexString = "0x" + toHexString(encryptedString);
-    console.log(hexString);
-    const result = await writeContract(config, {
-      abi,
-      address,
-      functionName: "mintAndApprove",
-      args: [formValues.eventContractAddress, hexString],
-    });
-    console.log(result);
+    try {
+      const instance = await getInstance();
+      const encryptedString = await instance.encrypt32(400000000);
+      const hexString = "0x" + toHexString(encryptedString);
+      const result = await writeContract(config, {
+        abi: erc20ABI,
+        address: formValues.erc20ContractAddress,
+        functionName: "mintAndApprove",
+        args: [formValues.eventContractAddress, hexString],
+      });
+      console.log(formValues.eventContractAddress);
+      console.log(result);
+    } catch (error) {
+      let errorMessage;
+      let indexOfDot = error.message.indexOf(".");
+      if (indexOfDot !== -1) {
+        errorMessage = error.message.slice(0, indexOfDot + 1);
+      }
+      console.log(error);
+      toast({
+        title: errorMessage,
+        description: "Unexpected Error!",
+      });
+    }
   };
 
-  const buyEventTickets = () => {};
+  const watchContract = watchContractEvent(config, {
+    address: formValues.eventContractAddress,
+    abi: eventABI,
+    eventName: "TokenPurchased",
+    onLogs(logs) {
+      console.log("New logs!", logs);
+      setIsOpen(true);
+    },
+  });
+
+  const buyEventTickets = async () => {
+    try {
+      const instance = await getInstance();
+      const encryptedString = await instance.encrypt32(400000000);
+      const hexString = "0x" + toHexString(encryptedString);
+      // console.log(hexString);
+      const result = await writeContract(config, {
+        abi: eventABI,
+        address: formValues.eventContractAddress,
+        functionName: "buyToken",
+        args: [address, "usdc", hexString],
+      });
+      console.log([
+        formValues.eventContractAddress,
+        address,
+        "usdc",
+        hexString,
+      ]);
+      if (result) {
+        console.log(result);
+        watchContract();
+      }
+    } catch (error) {
+      let errorMessage;
+      let indexOfDot = error.message.indexOf(".");
+      if (indexOfDot !== -1) {
+        errorMessage = error.message.slice(0, indexOfDot + 1);
+      }
+      console.log(error);
+      toast({
+        title: errorMessage,
+        description: "Unexpected Error!",
+      });
+    }
+  };
 
   return (
     <div className="mt-20 flex flex-col gap-6 pb-16">
+      <TicketPopup
+        sampleData={data}
+        isOpen={isOpen}
+        setIsOpen={setIsOpen}
+        eventContractAddress={formValues.eventContractAddress}
+      />
       <div className="mt-10 flex justify-between scroll-m-20 border-b pb-6 text-3xl font-semibold tracking-tight transition-colors first:mt-0">
         Buy Token
       </div>
