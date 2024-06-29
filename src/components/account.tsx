@@ -19,6 +19,9 @@ import AlertDialouge from "./alert-dialouge";
 import Link from "next/link";
 import { eventABI } from "@/abi/EventABI";
 import { getContractAddress } from "viem";
+import { erc20Bytecode } from "@/utils/erc20Bytecode";
+import { abi } from "@/abi/ERC20ABI";
+import ERCAlertDialouge from "./erc20Contract";
 
 let instance;
 export function Account() {
@@ -27,6 +30,7 @@ export function Account() {
   const { data: ensName } = useEnsName({ address });
   const chainId = useChainId();
   const { deployContract } = useDeployContract();
+  const [erc20ContractAddress, setErc20ContractAddress] = useState("");
   const [formValues, setFormValues] = useState({
     formAddress: address,
     uri: "https://blocklive.io/metadata/collection",
@@ -43,6 +47,14 @@ export function Account() {
   });
   const [responseAddress, setResponseAddress] = useState("");
   const [alertDialouge, setAlertDialouge] = useState(false);
+  const [ercAlertDialouge, setErcAlertDialouge] = useState("");
+  useEffect(() => {
+    setFormValues((prevValues) => ({
+      ...prevValues,
+      tokenAddress: erc20ContractAddress,
+    }));
+  }, [erc20ContractAddress]);
+
   const handleChange = (e: any) => {
     const { id, value } = e.target;
     setFormValues((prevValues) => ({
@@ -65,7 +77,7 @@ export function Account() {
     { id: "evtTokenSupply", label: "Event Token Supply" },
   ];
 
-  const getContractAddressFunction = async () => {
+  const getContractAddressFunction = async (setter: any, alerDialouge: any) => {
     const transactionCount = await getTransactionCount(config, {
       address: address,
     });
@@ -73,8 +85,8 @@ export function Account() {
       from: address,
       nonce: transactionCount,
     });
-    setResponseAddress(contractAddress);
-    setAlertDialouge(true);
+    setter(contractAddress);
+    alerDialouge(true);
   };
 
   const handleFormSubmit = async () => {
@@ -105,7 +117,32 @@ export function Account() {
       {
         onSuccess(data, variables, context) {
           console.log(data);
-          getContractAddressFunction();
+          getContractAddressFunction(setResponseAddress, setAlertDialouge);
+        },
+        onError(error, variables, context) {
+          console.log(error);
+        },
+        onSettled(data, error, variables, context) {
+          console.log(data);
+        },
+      }
+    );
+  };
+
+  const deployERC20Contract = async () => {
+    deployContract(
+      {
+        abi: abi,
+        args: [],
+        bytecode: erc20Bytecode,
+      },
+      {
+        onSuccess(data, variables, context) {
+          console.log(data);
+          getContractAddressFunction(
+            setErc20ContractAddress,
+            setErcAlertDialouge
+          );
         },
         onError(error, variables, context) {
           console.log(error);
@@ -146,9 +183,17 @@ export function Account() {
     <div className="mt-20 grid gap-6 pb-16">
       {responseAddress !== "" && (
         <AlertDialouge
+          erc20ContractAddress={erc20ContractAddress}
           isOpen={alertDialouge}
           address={responseAddress}
           setIsOpen={setAlertDialouge}
+        />
+      )}
+      {erc20ContractAddress !== "" && (
+        <ERCAlertDialouge
+          isOpen={ercAlertDialouge}
+          address={erc20ContractAddress}
+          setIsOpen={setErcAlertDialouge}
         />
       )}
       <div className="mt-10 flex justify-between scroll-m-20 border-b pb-6 text-3xl font-semibold tracking-tight transition-colors first:mt-0">
@@ -179,7 +224,13 @@ export function Account() {
           </div>
         )}
       </div>
-      <div className="grid grid-cols-2 mt-10 gap-8">
+      <h2 className="text-2xl font-semibold">Step 1: Deploy your ERC20 contract</h2>
+      <div>
+        <Button onClick={deployERC20Contract}>Deploy Erc 20 contract</Button>
+      </div>
+      <div className="mt-10 flex justify-between scroll-m-20 border-b pb-6 text-3xl font-semibold tracking-tight transition-colors first:mt-0"></div>
+      <h2 className="text-2xl font-semibold">Step 2: Deploy your event contract</h2>
+      <div className="grid grid-cols-2 mt-6 gap-8">
         {formFields.map(({ id, label }) => (
           <div key={id} className="grid gap-2 md:grid-cols-2 items-center">
             <Label htmlFor={id}>{label}</Label>
