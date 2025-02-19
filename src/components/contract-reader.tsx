@@ -34,6 +34,13 @@ const CONTRACT_ABI = [
   }
 ] as const;
 
+// Helper function to format numbers with commas
+const formatNumber = (value: number | string) => {
+  return Number(value).toLocaleString('en-US', {
+    maximumFractionDigits: 0
+  });
+};
+
 export default function ContractReader() {
   console.log('ContractReader mounting');
   
@@ -152,66 +159,55 @@ export default function ContractReader() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-8">
       {/* Stats Section */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 text-white/80">
-          <h2 className="text-2xl font-bold">Quantum Raffle</h2>
-          <span className="text-sm opacity-60">STATS</span>
-        </div>
-        
-        <div className="grid grid-cols-3 gap-4">
-          {/* Game ID Card */}
-          <Card className="bg-black/40 border-none">
-            <CardContent className="p-6">
-              <div className="space-y-2">
-                <p className="text-sm text-white/60">Game ID</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-2xl font-bold text-white">{gameId}</p>
-                  <div className="w-px h-4 bg-white/20" />
-                  <p className="text-sm text-white/60">Current Game</p>
-                </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Game ID Card */}
+        <Card className="bg-black border border-white/10 rounded-xl hover:border-white/20 transition-colors">
+          <CardContent className="p-6">
+            <div className="space-y-1">
+              <p className="text-sm text-white/40">Game ID</p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-3xl font-bold text-white">{formatNumber(gameId)}</p>
+                <div className="text-sm text-white/40">Current Game</div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Winners Card */}
-          <Card className="bg-black/40 border-none">
-            <CardContent className="p-6">
-              <div className="space-y-2">
-                <p className="text-sm text-white/60">Winners</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-2xl font-bold text-white">
-                    {winnersLoading ? 'Loading...' : numWinners?.toString() || '0'}
-                  </p>
-                  <div className="w-px h-4 bg-white/20" />
-                  <p className="text-sm text-white/60">This Round</p>
-                </div>
+        {/* Winners Card */}
+        <Card className="bg-black border border-white/10 rounded-xl hover:border-white/20 transition-colors">
+          <CardContent className="p-6">
+            <div className="space-y-1">
+              <p className="text-sm text-white/40">Winners</p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-3xl font-bold text-white">
+                  {winnersLoading ? 'Loading...' : formatNumber(numWinners?.toString() || '0')}
+                </p>
+                <div className="text-sm text-white/40">This Round</div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Total Entries Card */}
-          <Card className="bg-black/40 border-none">
-            <CardContent className="p-6">
-              <div className="space-y-2">
-                <p className="text-sm text-white/60">Total Entries</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-2xl font-bold text-white">{totalEntries}</p>
-                  <div className="w-px h-4 bg-white/20" />
-                  <p className="text-sm text-white/60">Tickets</p>
-                </div>
+        {/* Total Entries Card */}
+        <Card className="bg-black border border-white/10 rounded-xl hover:border-white/20 transition-colors">
+          <CardContent className="p-6">
+            <div className="space-y-1">
+              <p className="text-sm text-white/40">Total Entries</p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-3xl font-bold text-white">{formatNumber(totalEntries)}</p>
+                <div className="text-sm text-white/40">Tickets</div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Prize Pool Chart */}
-      <PrizePoolChart events={events} isLoading={isLoading} />
-
       {/* Entries Table */}
-      <EntriesTable entries={eventsWithTickets} isLoading={isLoading} />
+      <div className="border border-white/10 rounded-xl bg-black">
+        <EntriesTable entries={eventsWithTickets} isLoading={isLoading} />
+      </div>
     </div>
   );
 } 

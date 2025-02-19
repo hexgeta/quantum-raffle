@@ -3,9 +3,9 @@ import ContractReader from "@/components/contract-reader";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-black to-gray-900">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8 text-center">Quantum Raffle Analytics</h1>
+    <main className="min-h-screen bg-black">
+      <div className="w-full px-4">
+        <h1 className="text-4xl font-bold py-8 text-white/80">Quantum Raffle Analytics</h1>
         <ContractReader />
       </div>
     </main>
