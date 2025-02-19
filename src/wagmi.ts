@@ -29,4 +29,5 @@ export const config = createConfig({
     [pulsechain.id]: http('https://rpc.pulsechain.com'),
   },
   ssr: true,
+  defaultChainId: pulsechain.id,
 }) 

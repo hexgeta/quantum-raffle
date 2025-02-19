@@ -2,7 +2,10 @@
 
 import { useContractRead, useWatchContractEvent, usePublicClient } from 'wagmi';
 import { useState, useEffect } from 'react';
-import { formatEther, parseAbiItem, Log } from 'viem';
+import { formatEther, parseAbiItem, type Log } from 'viem';
+import { Card, CardContent } from "@/components/ui/card";
+import { EntriesTable } from './entries-table';
+import PrizePoolChart from './prize-pool-chart';
 
 const CONTRACT_ADDRESS = '0x165BAD87E3eF9e1F4FB9b384f2BD1FaBDc414f17';
 
@@ -67,8 +70,8 @@ export default function ContractReader() {
 
         console.log('Raw logs from blockchain:', logs);
 
-        const formattedEvents = logs.map((log: Log) => {
-          const args = log.args as any; // Type assertion since we know the structure
+        const formattedEvents = logs.map((log) => {
+          const args = (log as any).args; // Type assertion since we know the structure
           console.log('Processing log:', log);
           console.log('Log args:', args);
           
@@ -122,61 +125,93 @@ export default function ContractReader() {
     },
   });
 
+  // Sort and add ticket numbers to events
+  const eventsWithTickets = events
+    .sort((a, b) => b.blockNumber - a.blockNumber) // Sort by block number in descending order
+    .reduce((acc, event) => {
+      // Get the next ticket number (start from the last ticket number in acc, or total entries if acc is empty)
+      const lastTicketNumber = acc.length > 0 ? 
+        acc[acc.length - 1].startTicketNumber - 1 : 
+        events[0].numEntries;
+
+      // For each event, create an array of entries based on numEntries
+      const entries = Array.from({ length: event.numEntries }, (_, i) => ({
+        ...event,
+        startTicketNumber: lastTicketNumber,
+        ticketNumber: lastTicketNumber - i
+      }));
+
+      return [...acc, ...entries];
+    }, []);
+
+  // Calculate total entries
+  const totalEntries = events.length > 0 ? events[0].numEntries : 0;
+
   if (winnersError) {
     return <div className="text-red-500">Error loading contract data</div>;
   }
 
   return (
-    <div className="space-y-8">
-      <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
-        <h2 className="text-2xl font-bold mb-4">Current Game Stats</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-gray-700 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold mb-2">Game ID</h3>
-            <p className="text-2xl">{gameId}</p>
-          </div>
-          <div className="bg-gray-700 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold mb-2">Number of Winners</h3>
-            <p className="text-2xl">{winnersLoading ? 'Loading...' : numWinners?.toString()}</p>
-          </div>
+    <div className="space-y-6 p-6">
+      {/* Stats Section */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-white/80">
+          <h2 className="text-2xl font-bold">Quantum Raffle</h2>
+          <span className="text-sm opacity-60">STATS</span>
+        </div>
+        
+        <div className="grid grid-cols-3 gap-4">
+          {/* Game ID Card */}
+          <Card className="bg-black/40 border-none">
+            <CardContent className="p-6">
+              <div className="space-y-2">
+                <p className="text-sm text-white/60">Game ID</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-2xl font-bold text-white">{gameId}</p>
+                  <div className="w-px h-4 bg-white/20" />
+                  <p className="text-sm text-white/60">Current Game</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Winners Card */}
+          <Card className="bg-black/40 border-none">
+            <CardContent className="p-6">
+              <div className="space-y-2">
+                <p className="text-sm text-white/60">Winners</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-2xl font-bold text-white">
+                    {winnersLoading ? 'Loading...' : numWinners?.toString() || '0'}
+                  </p>
+                  <div className="w-px h-4 bg-white/20" />
+                  <p className="text-sm text-white/60">This Round</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Total Entries Card */}
+          <Card className="bg-black/40 border-none">
+            <CardContent className="p-6">
+              <div className="space-y-2">
+                <p className="text-sm text-white/60">Total Entries</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-2xl font-bold text-white">{totalEntries}</p>
+                  <div className="w-px h-4 bg-white/20" />
+                  <p className="text-sm text-white/60">Tickets</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
-        <h2 className="text-2xl font-bold mb-4">Recent Game Entries</h2>
-        {isLoading ? (
-          <div className="text-center py-4">Loading past events...</div>
-        ) : events.length === 0 ? (
-          <div className="text-center py-4">No events found</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr className="border-b border-gray-700">
-                  <th className="px-4 py-2 text-left">Block</th>
-                  <th className="px-4 py-2 text-left">Time</th>
-                  <th className="px-4 py-2 text-left">Entrant</th>
-                  <th className="px-4 py-2 text-left">Entry Amount</th>
-                  <th className="px-4 py-2 text-left">Prize Pool</th>
-                  <th className="px-4 py-2 text-left">Entries</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map((event, index) => (
-                  <tr key={event.transactionHash + index} className="border-b border-gray-700">
-                    <td className="px-4 py-2">{event.blockNumber}</td>
-                    <td className="px-4 py-2">{event.timestamp}</td>
-                    <td className="px-4 py-2">{`${event.entrant.slice(0, 6)}...${event.entrant.slice(-4)}`}</td>
-                    <td className="px-4 py-2">{event.entryAmount} PLS</td>
-                    <td className="px-4 py-2">{event.prizePool} PLS</td>
-                    <td className="px-4 py-2">{event.numEntries}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      {/* Prize Pool Chart */}
+      <PrizePoolChart events={events} isLoading={isLoading} />
+
+      {/* Entries Table */}
+      <EntriesTable entries={eventsWithTickets} isLoading={isLoading} />
     </div>
   );
 } 
