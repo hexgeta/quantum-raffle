@@ -1,15 +1,13 @@
-import { http, createConfig } from "wagmi";
-import { injected, safe, walletConnect, metaMask } from "wagmi/connectors";
-import { incoNetwork } from "./chainConfig";
-import { sepolia } from "viem/chains";
+import { createConfig, http } from 'wagmi';
+import { pulsechain } from './chainConfig';
+import { injected } from 'wagmi/connectors';
 
 export const config = createConfig({
-  chains: [incoNetwork],
-  ssr: true,
-  connectors: [injected(), metaMask()],
+  chains: [pulsechain],
+  connectors: [
+    injected(),
+  ],
   transports: {
-    [incoNetwork.id]: http("https://testnet.inco.org/"),
-    // [sepolia.id]: http("https://eth-sepolia.g.alchemy.com/v2/..."),
-    // [sepolia.id]: http(),
+    [pulsechain.id]: http('https://rpc.pulsechain.com'),
   },
 });

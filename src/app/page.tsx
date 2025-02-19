@@ -1,23 +1,13 @@
 "use client";
-import { Profile } from "@/components/profile";
-import { Button } from "@/components/ui/button";
-import React from "react";
-import { Account } from "@/components/account";
-import { WalletOptions } from "@/components/wallet-options";
-import { useAccount } from "wagmi";
+import ContractReader from "@/components/contract-reader";
 
-function ConnectWallet() {
-  const { isConnected } = useAccount();
-  if (isConnected) return <Account />;
-  return <WalletOptions />;
-}
-
-const Home = () => {
+export default function Home() {
   return (
-    <div>
-      <ConnectWallet />
-    </div>
+    <main className="min-h-screen p-8">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-4xl font-bold mb-8 text-center">Quantum Raffle Analytics</h1>
+        <ContractReader />
+      </div>
+    </main>
   );
-};
-
-export default Home;
+}

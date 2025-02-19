@@ -1,4 +1,4 @@
-import { type Chain } from "viem";
+import { type Chain, defineChain } from "viem";
 
 const AUTHORIZED_CHAIN_ID = [9090, 9091];
 export const incoNetwork = {
@@ -15,3 +15,21 @@ export const incoNetwork = {
     },
   },
 } as const satisfies Chain;
+
+export const pulsechain = defineChain({
+  id: 369,
+  name: 'PulseChain',
+  network: 'pulsechain',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'Pulse',
+    symbol: 'PLS',
+  },
+  rpcUrls: {
+    default: { http: ['https://rpc.pulsechain.com'] },
+    public: { http: ['https://rpc.pulsechain.com'] },
+  },
+  blockExplorers: {
+    default: { name: 'PulseScan', url: 'https://scan.pulsechain.com' },
+  },
+});
