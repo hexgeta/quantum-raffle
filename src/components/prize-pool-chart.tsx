@@ -113,17 +113,6 @@ function PrizePoolChart({ events, isLoading }: Props) {
                   return `${Math.round(inMillions)}M`;
                 }}
               />
-              <YAxis 
-                yAxisId="usd"
-                orientation="right"
-                axisLine={false}
-                tickLine={{ stroke: '#888', strokeWidth: 0 }}
-                tick={{ fill: '#888', fontSize: 14, dx: 5}}
-                tickFormatter={(value) => `$${value.toLocaleString('en-US', {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0
-                })}`}
-              />
               <Tooltip 
                 contentStyle={{ 
                   backgroundColor: 'rgba(0, 0, 0, 0.85)', 
@@ -143,33 +132,31 @@ function PrizePoolChart({ events, isLoading }: Props) {
                     minute: '2-digit'
                   });
                 }}
-                formatter={(value: any) => {
+                formatter={(value: any, name: string, props: any) => {
                   if (typeof value !== 'number') return '';
-                  return value.toLocaleString('en-US', {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0
-                  });
+                  const plsValue = props.payload.prizePool;
+                  const usdValue = props.payload.prizePoolUsd;
+                  
+                  return [
+                    `${plsValue.toLocaleString('en-US', {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0
+                    })} PLS\n$${usdValue.toLocaleString('en-US', {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0
+                    })}`
+                  ];
                 }}
               />
               <Line 
                 yAxisId="pls"
                 type="monotone" 
                 dataKey="prizePool" 
-                name="Prize Pool (PLS)"
+                name="Prize Pool"
                 dot={false} 
                 strokeWidth={2} 
                 stroke="#55FF9F" 
                 activeDot={{ r: 4, fill: '#55FF9F', stroke: 'white' }}
-              />
-              <Line 
-                yAxisId="usd"
-                type="monotone" 
-                dataKey="prizePoolUsd" 
-                name="Prize Pool (USD)"
-                dot={false} 
-                strokeWidth={2} 
-                stroke="#FFD700" 
-                activeDot={{ r: 4, fill: '#FFD700', stroke: 'white' }}
               />
             </LineChart>
           </ResponsiveContainer>
