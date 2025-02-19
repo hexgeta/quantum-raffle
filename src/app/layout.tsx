@@ -1,11 +1,14 @@
 'use client';
 
-import { Inter } from "next/font/google";
+import { Jura } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import Provider from "@/wagmiProvider/provider";
 
-const inter = Inter({ subsets: ["latin"] });
+const jura = Jura({ 
+  subsets: ["latin"],
+  weight: "700"
+});
 
 export default function RootLayout({
   children,
@@ -14,10 +17,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={jura.className}>
         <Provider>
-          <main className="grid place-items-center min-h-screen bg-main/15">
-            <div className="h-full w-full grid md:max-w-6xl px-6 md:px-12">
+          <main className="min-h-screen bg-black">
+            <div className="mx-auto max-w-6xl p-10">
               {children}
             </div>
           </main>

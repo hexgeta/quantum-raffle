@@ -6,6 +6,7 @@ import { formatEther, parseAbiItem, type Log } from 'viem';
 import { Card, CardContent } from "@/components/ui/card";
 import { EntriesTable } from './entries-table';
 import PrizePoolChart from './prize-pool-chart';
+import { useCryptoPrice } from '@/hooks/use-crypto-price';
 
 const CONTRACT_ADDRESS = '0x165BAD87E3eF9e1F4FB9b384f2BD1FaBDc414f17';
 
@@ -48,6 +49,7 @@ export default function ContractReader() {
   const [events, setEvents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const publicClient = usePublicClient();
+  const { priceData } = useCryptoPrice('PLS');
 
   // Read number of winners for current game
   const { data: numWinners, isError: winnersError, isLoading: winnersLoading } = useContractRead({
@@ -159,55 +161,107 @@ export default function ContractReader() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="relative py-4">
       {/* Stats Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Game ID Card */}
-        <Card className="bg-black border border-white/10 rounded-xl hover:border-white/20 transition-colors">
-          <CardContent className="p-6">
-            <div className="space-y-1">
-              <p className="text-sm text-white/40">Game ID</p>
-              <div className="flex items-baseline gap-2">
-                <p className="text-3xl font-bold text-white">{formatNumber(gameId)}</p>
-                <div className="text-sm text-white/40">Current Game</div>
+        {isLoading ? (
+          <Card className="bg-black border border-white/20 rounded-[15px]">
+            <CardContent className="p-6">
+              <div className="space-y-1">
+                <div className="h-4 w-20 bg-white/10 rounded animate-pulse" />
+                <div className="h-8 w-32 bg-white/10 rounded animate-pulse mt-2" />
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-black border border-white/20 rounded-[15px]">
+            <CardContent className="p-6">
+              <div className="space-y-1">
+                <p className="text-sm text-white/40">Game ID</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-bold text-white">{formatNumber(gameId)}</p>
+                  <div className="text-sm text-white/40">Current Game</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Winners Card */}
-        <Card className="bg-black border border-white/10 rounded-xl hover:border-white/20 transition-colors">
-          <CardContent className="p-6">
-            <div className="space-y-1">
-              <p className="text-sm text-white/40">Winners</p>
-              <div className="flex items-baseline gap-2">
-                <p className="text-3xl font-bold text-white">
-                  {winnersLoading ? 'Loading...' : formatNumber(numWinners?.toString() || '0')}
-                </p>
-                <div className="text-sm text-white/40">This Round</div>
+        {/* Average Tickets per Entrant Card */}
+        {isLoading ? (
+          <Card className="bg-black border border-white/20 rounded-[15px]">
+            <CardContent className="p-6">
+              <div className="space-y-1">
+                <div className="h-4 w-20 bg-white/10 rounded animate-pulse" />
+                <div className="h-8 w-32 bg-white/10 rounded animate-pulse mt-2" />
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-black border border-white/20 rounded-[15px]">
+            <CardContent className="p-6">
+              <div className="space-y-1">
+                <p className="text-sm text-white/40">Avg. Tickets/Entrant</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-bold text-white">
+                    {events.length === 0 ? '0' : (() => {
+                      // Create a map to store total entries per address
+                      const entriesPerAddress = events.reduce((acc, event) => {
+                        acc.set(
+                          event.entrant, 
+                          (acc.get(event.entrant) || 0) + Number(event.numEntries)
+                        );
+                        return acc;
+                      }, new Map<string, number>());
+                      
+                      // Calculate average entries per address
+                      const totalAddresses = entriesPerAddress.size;
+                      const values = Array.from(entriesPerAddress.values()) as number[];
+                      const totalEntries = values.reduce((a, b) => a + b, 0);
+                      const average = totalEntries / totalAddresses;
+                      
+                      return formatNumber(Math.round(average));
+                    })()}
+                  </p>
+                  <div className="text-sm text-white/40">Per Address</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Total Entries Card */}
-        <Card className="bg-black border border-white/10 rounded-xl hover:border-white/20 transition-colors">
-          <CardContent className="p-6">
-            <div className="space-y-1">
-              <p className="text-sm text-white/40">Total Entries</p>
-              <div className="flex items-baseline gap-2">
-                <p className="text-3xl font-bold text-white">{formatNumber(totalEntries)}</p>
-                <div className="text-sm text-white/40">Tickets</div>
+        {/* Total Prize Pool Card */}
+        {isLoading ? (
+          <Card className="bg-black border border-white/20 rounded-[15px]">
+            <CardContent className="p-6">
+              <div className="space-y-1">
+                <div className="h-4 w-20 bg-white/10 rounded animate-pulse" />
+                <div className="h-8 w-32 bg-white/10 rounded animate-pulse mt-2" />
+                <div className="h-6 w-24 bg-white/10 rounded animate-pulse mt-2" />
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-black border border-white/20 rounded-[15px]">
+            <CardContent className="p-6">
+              <div className="space-y-1">
+                <p className="text-sm text-white/40">Total Prize Pool</p>
+                <div className="flex flex-col">
+                  <p className="text-3xl font-bold text-white">{formatNumber(events[0]?.prizePool || 0)} PLS</p>
+                  <p className="text-lg text-white/60">${formatNumber(events[0]?.prizePool * (priceData?.price || 0) || 0)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
+
+      {/* Prize Pool Chart */}
+      <PrizePoolChart events={events} isLoading={isLoading} />
 
       {/* Entries Table */}
-      <div className="border border-white/10 rounded-xl bg-black">
-        <EntriesTable entries={eventsWithTickets} isLoading={isLoading} />
-      </div>
+      <EntriesTable entries={eventsWithTickets} isLoading={isLoading} />
     </div>
   );
 } 

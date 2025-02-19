@@ -2,14 +2,18 @@
 
 import React, { useEffect, useState } from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  TooltipProps
 } from 'recharts';
+import { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
+import { useCryptoPrice } from '@/hooks/use-crypto-price';
 
 interface ChartData {
   timestamp: string;
   prizePool: number;
+  prizePoolUsd: number;
 }
 
 interface Props {
@@ -19,90 +23,54 @@ interface Props {
 
 function PrizePoolChart({ events, isLoading }: Props) {
   const [chartData, setChartData] = useState<ChartData[]>([]);
-  
-  const [visibleLines, setVisibleLines] = useState({
-    prizePool: true,
-  });
+  const [isRendered, setIsRendered] = useState(false);
+  const { priceData } = useCryptoPrice('PLS');
 
   useEffect(() => {
-    if (events.length > 0) {
+    if (events.length > 0 && priceData?.price) {
       // Process events to create time series data
       const timeSeriesData = events
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
         .map(event => ({
           timestamp: event.timestamp,
-          prizePool: parseFloat(event.prizePool)
+          prizePool: parseFloat(event.prizePool),
+          prizePoolUsd: parseFloat(event.prizePool) * priceData.price
         }));
 
       setChartData(timeSeriesData);
+      // Add a delay to ensure chart is fully rendered
+      setTimeout(() => {
+        setIsRendered(true);
+      }, 500);
     }
-  }, [events]);
+  }, [events, priceData?.price]);
 
-  const handleLegendClick = (dataKey: string) => {
-    setVisibleLines(prev => ({
-      ...prev,
-      [dataKey]: !prev[dataKey]
-    }));
-  };
-
-  const customLegend = (props: any) => {
-    const { payload } = props;
-    
-    if (payload && chartData?.length > 0) {
-      return (
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          width: '100%', 
-          marginTop: '35px' 
-        }}>
-          <ul style={{ 
-            listStyle: 'none', 
-            padding: 0, 
-            display: 'flex', 
-            flexWrap: 'wrap', 
-            justifyContent: 'center' 
-          }}>
-            {payload.map((entry: any, index: number) => (
-              <li 
-                key={`item-${index}`}
-                style={{ 
-                  display: 'inline-flex', 
-                  alignItems: 'center', 
-                  marginRight: 20, 
-                  marginBottom: 5,
-                  cursor: 'pointer' 
-                }}
-                onClick={() => handleLegendClick(entry.dataKey)}
-              >
-                <span style={{ 
-                  color: entry.color, 
-                  marginRight: 5,
-                  fontSize: '28px',
-                  lineHeight: '18px',
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>●</span>
-                <span style={{ 
-                  color: visibleLines[entry.dataKey] ? '#fff' : '#888',
-                  fontSize: '12px',
-                  lineHeight: '12px'
-                }}>
-                  {entry.value}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      );
+  // Reset rendered state when loading changes
+  useEffect(() => {
+    if (isLoading) {
+      setIsRendered(false);
     }
-    return null;
-  };
+  }, [isLoading]);
 
   return (
-    <Card className="w-full h-[450px] my-10 relative bg-black/40 border-none">
-      {isLoading ? (
-        <Skeleton className="w-full h-full rounded-[15px]" />
+    <div className="w-full h-[450px] relative py-4">
+      {(isLoading || !isRendered) ? (
+        <div className="w-full h-full p-5 border border-white/20 rounded-[15px]">
+          <div className="h-8 w-48 bg-white/10 rounded mb-8 ml-10" />
+          <div className="w-full h-[300px] flex items-end px-10">
+            {[...Array(12)].map((_, i) => (
+              <div 
+                key={i} 
+                className="flex-1 bg-white/10 rounded-t mx-1"
+                style={{ height: '40%' }} 
+              />
+            ))}
+          </div>
+          <div className="flex justify-between mt-4 px-10">
+            <div className="h-4 w-20 bg-white/10 rounded" />
+            <div className="h-4 w-20 bg-white/10 rounded" />
+          </div>
+        </div>
       ) : (
         <div className="w-full h-full p-5 border border-white/20 rounded-[15px]">
           <h2 className="text-left text-white text-2xl mb-0 ml-10">
@@ -118,54 +86,54 @@ function PrizePoolChart({ events, isLoading }: Props) {
               <XAxis 
                 dataKey="timestamp"
                 axisLine={{ stroke: '#888', strokeWidth: 0 }}
-                tickLine={false}
+                tickLine={{ stroke: '#888', strokeWidth: 0 }}
                 tick={{ fill: '#888', fontSize: 14, dy: 5 }}
                 ticks={[chartData[0]?.timestamp, chartData[chartData.length - 1]?.timestamp]}
                 tickFormatter={(value) => {
                   const date = new Date(value);
                   return date.toLocaleDateString('en-US', { 
                     month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
+                    day: 'numeric'
                   });
-                }}
-                label={{ 
-                  value: 'TIME', 
-                  position: 'bottom',
-                  offset: 5,
-                  style: { 
-                    fill: '#888',
-                    fontSize: 12,
-                    marginTop: '0px',
-                  }
                 }}
               />
               <YAxis 
+                yAxisId="pls"
                 axisLine={false}
-                tickLine={false}
+                tickLine={{ stroke: '#888', strokeWidth: 0 }}
                 tick={{ fill: '#888', fontSize: 14, dx: -5}}
-                tickFormatter={(value) => `${value.toFixed(2)} PLS`}
-                label={{ 
-                  value: 'PRIZE POOL (PLS)', 
-                  position: 'left',
-                  angle: -90,
-                  offset: 0,
-                  style: { 
-                    fill: '#888',
-                    fontSize: 12,
-                    marginTop: '0px',
+                tickCount={5}
+                domain={[0, 'dataMax']}
+                tickFormatter={(value) => {
+                  if (value === 0) return "0";
+                  const inMillions = value / 1000000;
+                  if (inMillions >= 100) {
+                    return `${Math.round(inMillions / 100) * 100}M`;
                   }
+                  return `${Math.round(inMillions)}M`;
                 }}
+              />
+              <YAxis 
+                yAxisId="usd"
+                orientation="right"
+                axisLine={false}
+                tickLine={{ stroke: '#888', strokeWidth: 0 }}
+                tick={{ fill: '#888', fontSize: 14, dx: 5}}
+                tickFormatter={(value) => `$${value.toLocaleString('en-US', {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0
+                })}`}
               />
               <Tooltip 
                 contentStyle={{ 
                   backgroundColor: 'rgba(0, 0, 0, 0.85)', 
                   border: '1px solid rgba(255, 255, 255, 0.2)', 
-                  borderRadius: '10px'
+                  borderRadius: '10px',
+                  padding: '12px'
                 }}
-                labelStyle={{ color: 'white' }}
-                itemStyle={{ color: 'white' }}
+                labelStyle={{ color: 'white', marginBottom: '8px' }}
+                itemStyle={{ color: 'white', whiteSpace: 'pre-line' }}
+                separator=""
                 labelFormatter={(value) => {
                   const date = new Date(value);
                   return date.toLocaleString('en-US', {
@@ -175,24 +143,39 @@ function PrizePoolChart({ events, isLoading }: Props) {
                     minute: '2-digit'
                   });
                 }}
-                formatter={(value: number) => [`${value.toFixed(2)} PLS`, 'Prize Pool']}
+                formatter={(value: any) => {
+                  if (typeof value !== 'number') return '';
+                  return value.toLocaleString('en-US', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                  });
+                }}
               />
-              <Legend content={customLegend} />
               <Line 
+                yAxisId="pls"
                 type="monotone" 
                 dataKey="prizePool" 
-                name="Prize Pool"
+                name="Prize Pool (PLS)"
                 dot={false} 
                 strokeWidth={2} 
-                stroke="#3991ED" 
-                activeDot={{ r: 4, fill: '#3991ED', stroke: 'white' }}
-                hide={!visibleLines.prizePool}
+                stroke="#55FF9F" 
+                activeDot={{ r: 4, fill: '#55FF9F', stroke: 'white' }}
+              />
+              <Line 
+                yAxisId="usd"
+                type="monotone" 
+                dataKey="prizePoolUsd" 
+                name="Prize Pool (USD)"
+                dot={false} 
+                strokeWidth={2} 
+                stroke="#FFD700" 
+                activeDot={{ r: 4, fill: '#FFD700', stroke: 'white' }}
               />
             </LineChart>
           </ResponsiveContainer>
         </div>
       )}
-    </Card>
+    </div>
   );
 }
 
