@@ -120,7 +120,7 @@ function PrizePoolChart({ events, isLoading }: Props) {
                   borderRadius: '10px',
                   padding: '12px'
                 }}
-                labelStyle={{ color: 'white', marginBottom: '8px' }}
+                labelStyle={{ color: 'white', marginBottom: '4px' }}
                 itemStyle={{ color: 'white', whiteSpace: 'pre-line' }}
                 separator=""
                 labelFormatter={(value) => {
