@@ -178,11 +178,11 @@ export function EntriesTable({ entries, isLoading }: EntriesTableProps) {
                       key={`${entry.transactionHash}-${entry.ticketNumber}`}
                       className="border-b border-[#333] hover:bg-[#1a1a1a]"
                     >
-                      <TableCell className="text-white text-center font-mono">{formatNumber(entry.gameId)}</TableCell>
-                      <TableCell className="text-white text-center font-mono">{formatNumber(entry.blockNumber)}</TableCell>
+                      <TableCell className="text-white text-center">{formatNumber(entry.gameId)}</TableCell>
+                      <TableCell className="text-white text-center">{formatNumber(entry.blockNumber)}</TableCell>
                       <TableCell className="text-white text-center">{entry.timestamp}</TableCell>
-                      <TableCell className="text-white text-center font-mono">{formatNumber(entry.ticketNumber)}</TableCell>
-                      <TableCell className="text-white text-center font-mono">
+                      <TableCell className="text-white text-center">{formatNumber(entry.ticketNumber)}</TableCell>
+                      <TableCell className="text-white text-center">
                         {`${entry.entrant.slice(0, 6)}...${entry.entrant.slice(-4)}`}
                       </TableCell>
                       <TableCell className="text-center">

@@ -5,7 +5,6 @@ const nextConfig = {
     config.resolve.fallback = {
       ...config.resolve.fallback,
       "tfhe_bg.wasm": require.resolve("tfhe/tfhe_bg.wasm"),
-      encoding: require.resolve('encoding'),
       fs: false,
       net: false,
       tls: false
