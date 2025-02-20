@@ -21,7 +21,7 @@ export function NavBar() {
           
           <Link 
             href="https://quantumraffle.ai/" 
-            className="px-6 py-2 rounded-full bg-gradient-to-r from-purple-600 to-violet-600 text-white font-medium hover:opacity-90 transition-opacity"
+            className="hidden md:block px-6 py-2 rounded-full bg-gradient-to-r from-purple-600 to-violet-600 text-white font-medium hover:opacity-90 transition-opacity text-center"
           >
             Buy Tickets
           </Link>

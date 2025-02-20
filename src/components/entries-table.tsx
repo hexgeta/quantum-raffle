@@ -123,45 +123,69 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
   // Process and filter entries
   useEffect(() => {
     if (!isLoading && entries.length > 0) {
-      // First sort by timestamp in ascending order to assign ticket numbers
-      const timeOrderedEntries = [...entries].sort((a, b) => {
-        const dateA = new Date(a.timestamp);
-        const dateB = new Date(b.timestamp);
-        return dateA.getTime() - dateB.getTime();
+      // First group entries by game ID
+      const entriesByGame = entries.reduce((acc, entry) => {
+        const gameId = entry.gameId;
+        if (!acc[gameId]) {
+          acc[gameId] = [];
+        }
+        acc[gameId].push(entry);
+        return acc;
+      }, {} as { [key: number]: typeof entries });
+
+      // For each game, sort entries by timestamp and assign ticket numbers
+      let processedEntries: typeof entries = [];
+      Object.values(entriesByGame).forEach(gameEntries => {
+        // Sort entries within each game by timestamp
+        const timeOrderedEntries = [...gameEntries].sort((a, b) => {
+          const dateA = new Date(a.timestamp);
+          const dateB = new Date(b.timestamp);
+          return dateA.getTime() - dateB.getTime();
+        });
+
+        // Assign sequential ticket numbers starting from 1 for each game
+        const numberedEntries = timeOrderedEntries.map((entry, index) => ({
+          ...entry,
+          ticketNumber: index + 1,
+          timestamp: new Date(entry.timestamp).toLocaleString('en-US', { 
+            timeZone: 'UTC',
+            month: 'numeric',
+            day: 'numeric',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+          })
+        }));
+
+        processedEntries = [...processedEntries, ...numberedEntries];
       });
 
-      // Assign sequential ticket numbers starting from 1 (earliest gets #1)
-      const numberedEntries = timeOrderedEntries.map((entry, index) => ({
-        ...entry,
-        ticketNumber: index + 1,
-        timestamp: new Date(entry.timestamp).toLocaleString('en-US', { 
-          timeZone: 'UTC',
-          month: 'numeric',
-          day: 'numeric',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true
-        })
-      }));
-
-      // Then sort by timestamp in descending order for display (latest first)
-      const sortedEntries = numberedEntries.sort((a, b) => {
+      // Then sort all entries by timestamp in descending order for display
+      const sortedEntries = processedEntries.sort((a, b) => {
         const dateA = new Date(a.timestamp);
         const dateB = new Date(b.timestamp);
-        return dateB.getTime() - dateA.getTime();
+        // First sort by timestamp
+        const timeCompare = dateB.getTime() - dateA.getTime();
+        // If timestamps are equal, sort by ticket number (higher numbers first)
+        if (timeCompare === 0) {
+          return b.ticketNumber - a.ticketNumber;
+        }
+        return timeCompare;
       });
 
       // Filter based on search query first
       let filtered = searchQuery
         ? searchQuery === "🏆"
           ? sortedEntries.filter(entry => {
-              const totalEntries = entries.length;
+              // Get total entries for this specific game
+              const gameEntries = entriesByGame[entry.gameId];
+              const totalGameEntries = gameEntries.length;
               const ticketNumber = entry.ticketNumber;
-              return ticketNumber === totalEntries || // Last ticket
-                     ticketNumber === totalEntries - 9 || // 10th from last
-                     ticketNumber === totalEntries - 99 || // 100th from last
-                     ticketNumber === totalEntries - 999; // 1000th from last
+              return ticketNumber === totalGameEntries || // Last ticket
+                     ticketNumber === totalGameEntries - 9 || // 10th from last
+                     ticketNumber === totalGameEntries - 99 || // 100th from last
+                     ticketNumber === totalGameEntries - 999; // 1000th from last
             })
           : sortedEntries.filter(entry => 
               entry.entrant.toLowerCase().includes(searchQuery.toLowerCase())
