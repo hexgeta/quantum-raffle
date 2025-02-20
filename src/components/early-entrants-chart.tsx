@@ -45,7 +45,15 @@ function EarlyEntrantsChart({ events, isLoading, onAddressSelect }: Props) {
       sortedEvents.forEach(event => {
         if (!firstEntryPerAddress.has(event.entrant)) {
           firstEntryPerAddress.set(event.entrant, {
-            timestamp: event.timestamp,
+            timestamp: new Date(event.timestamp).toLocaleString('en-US', { 
+              timeZone: 'UTC',
+              month: 'numeric',
+              day: 'numeric',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            }) + ' UTC',
             entries: Number(event.numEntries)
           });
         }
@@ -188,7 +196,14 @@ function EarlyEntrantsChart({ events, isLoading, onAddressSelect }: Props) {
                 itemStyle={{ color: 'white', whiteSpace: 'pre-line' }}
                 labelFormatter={(label: string, payload: any[]) => {
                   if (payload && payload[0]) {
-                    return new Date(payload[0].payload.timestamp).toLocaleString();
+                    return new Date(payload[0].payload.timestamp).toLocaleString('en-US', {
+                      timeZone: 'UTC',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true
+                    }) + ' UTC';
                   }
                   return '';
                 }}

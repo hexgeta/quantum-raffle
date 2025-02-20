@@ -133,7 +133,16 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
       // Assign sequential ticket numbers starting from 1 (earliest gets #1)
       const numberedEntries = timeOrderedEntries.map((entry, index) => ({
         ...entry,
-        ticketNumber: index + 1
+        ticketNumber: index + 1,
+        timestamp: new Date(entry.timestamp).toLocaleString('en-US', { 
+          timeZone: 'UTC',
+          month: 'numeric',
+          day: 'numeric',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        })
       }));
 
       // Then sort by timestamp in descending order for display (latest first)
@@ -262,7 +271,7 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
                 <TableRow className="border-b border-[#333] hover:bg-transparent">
                   <TableHead className="text-gray-400 font-800 text-center">Game ID</TableHead>
                   <TableHead className="text-gray-400 font-800 text-center">Block</TableHead>
-                  <TableHead className="text-gray-400 font-800 text-center">Time</TableHead>
+                  <TableHead className="text-gray-400 font-800 text-center">Time (UTC)</TableHead>
                   <TableHead className="text-gray-400 font-800 text-center">Ticket #</TableHead>
                   <TableHead className="text-gray-400 font-800 text-center">Entrant</TableHead>
                   <TableHead className="text-gray-400 font-800 text-center">Entry Amount</TableHead>

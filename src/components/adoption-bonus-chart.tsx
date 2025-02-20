@@ -43,15 +43,24 @@ function AdoptionBonusChart({ events, isLoading, onAddressSelect }: Props) {
 
   useEffect(() => {
     if (events.length > 0) {
-      // Calculate total deposits for this game
-      const totalDeposits = events.reduce((sum, event) => 
-        sum + Number(event.entryAmount), 0
-      );
-      
-      // Sort events by timestamp first
-      const sortedEvents = [...events].sort((a, b) => 
-        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-      );
+      // First sort by timestamp in ascending order
+      const timeOrderedEvents = [...events].sort((a, b) => {
+        const dateA = new Date(a.timestamp);
+        const dateB = new Date(b.timestamp);
+        return dateA.getTime() - dateB.getTime();
+      });
+
+      // Expand events into individual tickets and assign sequential numbers
+      const expandedEvents = [];
+      let ticketNumber = 1;
+      for (const event of timeOrderedEvents) {
+        for (let i = 0; i < event.numEntries; i++) {
+          expandedEvents.push({
+            ...event,
+            ticketNumber: ticketNumber++
+          });
+        }
+      }
 
       // Create a map for shortened to full addresses
       const newAddressMap = new Map<string, string>();
@@ -64,10 +73,9 @@ function AdoptionBonusChart({ events, isLoading, onAddressSelect }: Props) {
       const totalEntrants = events[events.length - 1]?.entrantCount || 0;
       const totalEntrantsCohort = getNumDigits(totalEntrants);
 
-      // Process events to calculate adoption bonus
-      const processedData = sortedEvents.map((event, index) => {
-        const entrantId = event.entrantCount;
-        const entrantCohort = getNumDigits(entrantId);
+      // Process each ticket to calculate adoption bonus
+      const processedData = expandedEvents.map((event) => {
+        const entrantCohort = getNumDigits(event.ticketNumber);
         const shortAddress = `${event.entrant.slice(0, 6)}...${event.entrant.slice(-4)}`;
         const isActive = event.entrant === activeAddress;
         newAddressMap.set(shortAddress, event.entrant);
@@ -75,26 +83,35 @@ function AdoptionBonusChart({ events, isLoading, onAddressSelect }: Props) {
         let claimableBonus = 0;
         let pendingBonus = 0;
 
-        // For each cohort after this entrant's cohort
-        for (let cohortId = entrantCohort + 1; cohortId <= 4; cohortId++) {
-          // Calculate adoption bonus pool for this cohort (20% of deposits)
-          const cohortPool = (totalDeposits / 5) * (events.length > 0 ? events[0].numEntries : 0) / events.length;
-          
-          // Calculate team prize for this cohort
-          const teamPrize = cohortPool / (cohortId - 1);
-          
-          // Calculate number of members in team (based on entrant's digits)
-          const teamSize = Math.pow(10, entrantCohort) - Math.pow(10, entrantCohort - 1);
-          
-          // Calculate individual prize share
-          const prizeShare = teamPrize / teamSize;
+        // Calculate total deposits
+        const totalDeposits = events.reduce((sum, e) => sum + Number(e.entryAmount), 0);
+        
+        // Calculate claimable pool (first 1000 tickets * 0.2)
+        const claimableTickets = Math.min(1000, totalEntrants);
+        const claimablePool = (totalDeposits / totalEntrants) * claimableTickets * 0.2;
+        
+        // Calculate pending pool (tickets above 1000 * 0.2)
+        const pendingTickets = Math.max(0, totalEntrants - 1000);
+        const pendingPool = (totalDeposits / totalEntrants) * pendingTickets * 0.2;
 
-          // Check if this cohort is claimable (has been surpassed)
-          if (cohortId < totalEntrantsCohort) {
-            claimableBonus += prizeShare;
-          } else {
-            pendingBonus += prizeShare;
-          }
+        // Only teams 1 & 2 are eligible for claimable rewards (as team 4 is partially complete)
+        if (entrantCohort <= 2) {
+          // Split claimable pool between 2 teams
+          const teamShare = claimablePool / 2;
+          // Calculate number of members in team
+          const teamSize = Math.pow(10, entrantCohort) - Math.pow(10, entrantCohort - 1);
+          // Individual share
+          claimableBonus = teamShare / teamSize;
+        }
+
+        // Teams 1, 2, & 3 get pending rewards
+        if (entrantCohort <= 3) {
+          // Split pending pool between 3 teams
+          const teamShare = pendingPool / 3;
+          // Calculate number of members in team
+          const teamSize = Math.pow(10, entrantCohort) - Math.pow(10, entrantCohort - 1);
+          // Individual share
+          pendingBonus = teamShare / teamSize;
         }
 
         return {
@@ -104,20 +121,23 @@ function AdoptionBonusChart({ events, isLoading, onAddressSelect }: Props) {
           totalBonus: claimableBonus + pendingBonus,
           timestamp: event.timestamp,
           isActive,
-          fill: hasActiveAddress 
-            ? (isActive ? "#55FF9F" : "rgba(85, 255, 159, 0.2)")
-            : "#55FF9F",
+          fill: "#55FF9F",
           cohortId: entrantCohort,
-          teamId: Math.min(entrantCohort, 3),
-          ticketNumber: entrantId
+          teamId: Math.min(entrantCohort, 4),
+          ticketNumber: event.ticketNumber
         };
       });
 
-      // Sort by total bonus amount for better visualization
-      processedData.sort((a, b) => b.totalBonus - a.totalBonus);
+      // Sort by ticket number for chronological display
+      processedData.sort((a, b) => a.ticketNumber - b.ticketNumber);
+      
+      // Limit to first 50 tickets
+      const limitedData = processedData.slice(0, 50);
+      
+      console.log('Final processed data:', limitedData);
 
       setAddressMap(newAddressMap);
-      setChartData(processedData);
+      setChartData(limitedData);
       
       // Add a delay to ensure chart is fully rendered and transitions are smooth
       setTimeout(() => {
@@ -209,7 +229,11 @@ function AdoptionBonusChart({ events, isLoading, onAddressSelect }: Props) {
             })()}
           </div>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 30, right: 20, left: 20, bottom: 60 }}>
+            <BarChart 
+              data={chartData} 
+              margin={{ top: 30, right: 20, left: 20, bottom: 60 }}
+              barCategoryGap={1}
+            >
               <CartesianGrid 
                 strokeDasharray="3 3" 
                 stroke="rgba(136, 136, 136, 0.2)" 
@@ -223,6 +247,7 @@ function AdoptionBonusChart({ events, isLoading, onAddressSelect }: Props) {
                 angle={45}
                 textAnchor="start"
                 height={60}
+                interval={0}
               />
               <YAxis 
                 axisLine={false}
@@ -271,8 +296,9 @@ function AdoptionBonusChart({ events, isLoading, onAddressSelect }: Props) {
               />
               <Bar 
                 dataKey="totalBonus" 
-                fill="fill"
+                fill="#55FF9F"
                 radius={[2, 2, 0, 0]}
+                minPointSize={2}
                 isAnimationActive={false}
                 onClick={handleBarClick}
                 style={{ cursor: 'pointer', transition: 'all 500ms ease-in-out' }}

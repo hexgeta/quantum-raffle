@@ -9,6 +9,7 @@ import PrizePoolChart from './prize-pool-chart';
 import EntrantsChart from './entrants-chart';
 import EarlyEntrantsChart from './early-entrants-chart';
 import AdoptionBonusChart from './adoption-bonus-chart';
+import TicketsHeatmapChart from './tickets-heatmap-chart';
 import { useCryptoPrice } from '@/hooks/use-crypto-price';
 import { GameSummaryGrid } from './game-summary-grid';
 
@@ -555,7 +556,8 @@ export default function ContractReader() {
           <PrizePoolChart events={filteredEvents} isLoading={isLoading} />
           <EntrantsChart events={filteredEvents} isLoading={isLoading} />
           <EarlyEntrantsChart events={filteredEvents} isLoading={isLoading} />
-          <AdoptionBonusChart events={filteredEvents} isLoading={isLoading} />
+          <TicketsHeatmapChart events={filteredEvents} isLoading={isLoading} />
+          {/* <AdoptionBonusChart events={filteredEvents} isLoading={isLoading} /> */}
         </>
       )}
 

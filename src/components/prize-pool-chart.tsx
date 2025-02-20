@@ -34,7 +34,15 @@ function PrizePoolChart({ events, isLoading }: Props) {
         // Events are already filtered by game in the parent component
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
         .map(event => ({
-          timestamp: event.timestamp,
+          timestamp: new Date(event.timestamp).toLocaleString('en-US', { 
+            timeZone: 'UTC',
+            month: 'numeric',
+            day: 'numeric',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+          }) + ' UTC',
           prizePool: parseFloat(event.prizePool),
           prizePoolUsd: parseFloat(event.prizePool) * priceData.price,
           gameId: event.gameId
@@ -109,6 +117,7 @@ function PrizePoolChart({ events, isLoading }: Props) {
                 tickFormatter={(value) => {
                   const date = new Date(value);
                   return date.toLocaleDateString('en-US', { 
+                    timeZone: 'UTC',
                     month: 'short',
                     day: 'numeric'
                   });
@@ -143,11 +152,13 @@ function PrizePoolChart({ events, isLoading }: Props) {
                 labelFormatter={(value) => {
                   const date = new Date(value);
                   return date.toLocaleString('en-US', {
+                    timeZone: 'UTC',
                     month: 'short',
                     day: 'numeric',
                     hour: '2-digit',
-                    minute: '2-digit'
-                  });
+                    minute: '2-digit',
+                    hour12: true
+                  }) + ' UTC';
                 }}
                 formatter={(value: any, name: string, props: any) => {
                   if (typeof value !== 'number') return '';
