@@ -1,5 +1,8 @@
 {
-  "framework": "nextjs",
+  "framework": null,
   "buildCommand": "next build",
-  "outputDirectory": "out"
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 } 
