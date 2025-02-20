@@ -6,7 +6,10 @@ import { formatEther, parseAbiItem, type Log } from 'viem';
 import { Card, CardContent } from "@/components/ui/card";
 import { EntriesTable } from './entries-table';
 import PrizePoolChart from './prize-pool-chart';
+import EntrantsChart from './entrants-chart';
+import EarlyEntrantsChart from './early-entrants-chart';
 import { useCryptoPrice } from '@/hooks/use-crypto-price';
+import { GameSummaryGrid } from './game-summary-grid';
 
 const CONTRACT_ADDRESS = '0x165BAD87E3eF9e1F4FB9b384f2BD1FaBDc414f17';
 
@@ -35,6 +38,18 @@ const CONTRACT_ABI = [
   }
 ] as const;
 
+interface Entry {
+  gameId: number;
+  blockNumber: number;
+  timestamp: string;
+  ticketNumber: number;
+  entrant: string;
+  entryAmount: string;
+  prizePool: string;
+  numEntries: number;
+  transactionHash: string;
+}
+
 // Helper function to format numbers with commas
 const formatNumber = (value: number | string) => {
   return Number(value).toLocaleString('en-US', {
@@ -48,6 +63,8 @@ export default function ContractReader() {
   const [gameId, setGameId] = useState<number>(1);
   const [events, setEvents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedGame, setSelectedGame] = useState<string | null>(null);
+  const [hasInitialized, setHasInitialized] = useState(false);
   const publicClient = usePublicClient();
   const { priceData } = useCryptoPrice('PLS');
 
@@ -59,9 +76,29 @@ export default function ContractReader() {
     args: [BigInt(gameId)],
   });
 
-  // Fetch all historical events
+  // Get contract instance
+  const contract = {
+    isGameOver: async (gameId: number) => {
+      try {
+        if (!publicClient) return true;
+        
+        const winners = await publicClient.readContract({
+          address: CONTRACT_ADDRESS,
+          abi: CONTRACT_ABI,
+          functionName: 'getNumWinners',
+          args: [BigInt(gameId)]
+        });
+        return Number(winners) > 0;
+      } catch (error) {
+        console.error('Error checking game status:', error);
+        return true;
+      }
+    }
+  };
+
+  // Fetch all historical events and check active game
   useEffect(() => {
-    async function fetchHistoricalEvents() {
+    async function initialize() {
       try {
         console.log('Fetching historical events...');
         
@@ -77,13 +114,8 @@ export default function ContractReader() {
           toBlock: 'latest'
         });
 
-        console.log('Raw logs from blockchain:', logs);
-
         const formattedEvents = logs.map((log) => {
-          const args = (log as any).args; // Type assertion since we know the structure
-          console.log('Processing log:', log);
-          console.log('Log args:', args);
-          
+          const args = (log as any).args;
           return {
             gameId: Number(args.gameId),
             entrant: args.entrant,
@@ -98,16 +130,47 @@ export default function ContractReader() {
           };
         });
 
-        console.log('Formatted events:', formattedEvents);
         setEvents(formattedEvents);
+
+        // Get unique game IDs and check for active game
+        const gameIds = [...new Set(formattedEvents.map(event => event.gameId))].sort((a, b) => b - a);
+        
+        // Check each game starting from the most recent
+        for (const gameId of gameIds) {
+          try {
+            const isOver = await contract.isGameOver(gameId);
+            if (!isOver) {
+              setSelectedGame(gameId.toString());
+              break;
+            }
+          } catch (error) {
+            console.error(`Error checking game ${gameId}:`, error);
+          }
+        }
+
+        // If no active game found, use most recent
+        if (selectedGame === null) {
+          const mostRecentGameId = formattedEvents.length > 0 
+            ? formattedEvents.reduce((latest, event) => {
+                const entryDate = new Date(event.timestamp);
+                const latestDate = new Date(latest.timestamp);
+                return entryDate > latestDate ? event : latest;
+              }).gameId.toString()
+            : "all";
+          setSelectedGame(mostRecentGameId);
+        }
+
         setIsLoading(false);
+        setHasInitialized(true);
       } catch (error) {
-        console.error('Error fetching historical events:', error);
+        console.error('Error initializing:', error);
+        setSelectedGame("all"); // Fallback to all games on error
         setIsLoading(false);
+        setHasInitialized(true);
       }
     }
 
-    fetchHistoricalEvents();
+    initialize();
   }, [publicClient]);
 
   // Watch for new events
@@ -156,112 +219,283 @@ export default function ContractReader() {
   // Calculate total entries
   const totalEntries = events.length > 0 ? events[0].numEntries : 0;
 
+  // Filter events for selected game
+  const filteredEvents = selectedGame === "all" 
+    ? events 
+    : events.filter(event => event.gameId.toString() === selectedGame);
+
+  // Filter tickets for selected game
+  const filteredTickets = selectedGame === "all"
+    ? eventsWithTickets
+    : eventsWithTickets.filter((event: Entry) => event.gameId.toString() === selectedGame);
+
+  // Add loading state check
+  const isInitializing = isLoading || !hasInitialized || selectedGame === null;
+
+  // Loading state UI
+  if (isInitializing) {
+    return (
+      <div className="space-y-4">
+        {/* Stats Cards Loading State */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i} className="bg-black border border-white/20 rounded-[15px]">
+              <CardContent className="p-6">
+                <div className="space-y-1">
+                  <div className="h-4 w-20 bg-white/10 rounded animate-pulse" />
+                  <div className="h-8 w-32 bg-white/10 rounded animate-pulse mt-2" />
+                  <div className="h-6 w-24 bg-white/10 rounded animate-pulse mt-2" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Prize Pool Chart Loading State */}
+        <div className="w-full h-[450px] relative py-4">
+          <div className="w-full h-full p-5 border border-white/20 rounded-[15px]">
+            <div className="h-8 w-48 bg-white/10 rounded animate-pulse mb-8 ml-10" />
+            <div className="w-full h-[300px] flex items-end px-10">
+              {[...Array(4)].map((_, i) => (
+                <div 
+                  key={i} 
+                  className="flex-1 bg-white/10 rounded-t mx-1 animate-pulse"
+                  style={{ height: `${60 - (i * 15)}%` }} 
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Entrants Chart Loading State */}
+        <div className="w-full h-[450px] relative py-4">
+          <div className="w-full h-full p-5 border border-white/20 rounded-[15px]">
+            <div className="h-8 w-48 bg-white/10 rounded animate-pulse mb-8 ml-10" />
+            <div className="w-full h-[300px] flex items-end px-10">
+              {[...Array(4)].map((_, i) => (
+                <div 
+                  key={i} 
+                  className="flex-1 bg-white/10 rounded-t mx-1 animate-pulse"
+                  style={{ height: `${60 - (i * 15)}%` }} 
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Table Loading State */}
+        <div className="w-full py-4 px-1 xs:px-8">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-[180px] h-10 bg-white/10 rounded-[100px] animate-pulse" />
+            <div className="relative flex-1 max-w-md h-10 bg-white/10 rounded-[400px] animate-pulse" />
+          </div>
+          <div className="rounded-lg border border-white/20 rounded-[15px] overflow-hidden">
+            <div className="overflow-x-auto">
+              <div className="min-w-[800px]">
+                <div className="border-b border-[#333] p-4">
+                  <div className="grid grid-cols-9 gap-4">
+                    {[...Array(9)].map((_, i) => (
+                      <div key={i} className="h-4 bg-white/10 rounded animate-pulse" />
+                    ))}
+                  </div>
+                </div>
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="border-b border-[#333] p-4">
+                    <div className="grid grid-cols-9 gap-4">
+                      {[...Array(9)].map((_, j) => (
+                        <div key={j} className="h-8 bg-white/10 rounded animate-pulse" />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (winnersError) {
     return <div className="text-red-500">Error loading contract data</div>;
   }
 
+  // Handle game selection
+  const handleGameSelect = (gameId: string) => {
+    setSelectedGame(gameId);
+    // If we're in the same shell, scroll to top smoothly
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
-    <div className="relative py-4">
-      {/* Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Game ID Card */}
-        {isLoading ? (
-          <Card className="bg-black border border-white/20 rounded-[15px]">
-            <CardContent className="p-6">
-              <div className="space-y-1">
-                <div className="h-4 w-20 bg-white/10 rounded animate-pulse" />
-                <div className="h-8 w-32 bg-white/10 rounded animate-pulse mt-2" />
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="bg-black border border-white/20 rounded-[15px]">
-            <CardContent className="p-6">
-              <div className="space-y-1">
-                <p className="text-sm text-white/40">Game ID</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-3xl font-bold text-white">{formatNumber(gameId)}</p>
-                  <div className="text-sm text-white/40">Current Game</div>
+    <div className="space-y-4">
+      {selectedGame !== "all" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Game ID Card */}
+          {isLoading ? (
+            <Card className="bg-black border border-white/20 rounded-[15px]">
+              <CardContent className="p-6">
+                <div className="space-y-1">
+                  <div className="h-4 w-20 bg-white/10 rounded animate-pulse" />
+                  <div className="h-8 w-32 bg-white/10 rounded animate-pulse mt-2" />
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Average Tickets per Entrant Card */}
-        {isLoading ? (
-          <Card className="bg-black border border-white/20 rounded-[15px]">
-            <CardContent className="p-6">
-              <div className="space-y-1">
-                <div className="h-4 w-20 bg-white/10 rounded animate-pulse" />
-                <div className="h-8 w-32 bg-white/10 rounded animate-pulse mt-2" />
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="bg-black border border-white/20 rounded-[15px]">
-            <CardContent className="p-6">
-              <div className="space-y-1">
-                <p className="text-sm text-white/40">Avg. Tickets/Entrant</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-3xl font-bold text-white">
-                    {events.length === 0 ? '0' : (() => {
-                      // Create a map to store total entries per address
-                      const entriesPerAddress = events.reduce((acc, event) => {
-                        acc.set(
-                          event.entrant, 
-                          (acc.get(event.entrant) || 0) + Number(event.numEntries)
-                        );
-                        return acc;
-                      }, new Map<string, number>());
-                      
-                      // Calculate average entries per address
-                      const totalAddresses = entriesPerAddress.size;
-                      const values = Array.from(entriesPerAddress.values()) as number[];
-                      const totalEntries = values.reduce((a, b) => a + b, 0);
-                      const average = totalEntries / totalAddresses;
-                      
-                      return formatNumber(Math.round(average));
-                    })()}
-                  </p>
-                  <div className="text-sm text-white/40">Per Address</div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="bg-black border border-white/20 rounded-[15px]">
+              <CardContent className="p-6">
+                <div className="space-y-1">
+                  <p className="text-sm text-white/40">Game ID</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-3xl font-bold text-white">{selectedGame === "all" ? "-" : selectedGame}</p>
+                    <div className="text-sm text-white/40"></div>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+          )}
 
-        {/* Total Prize Pool Card */}
-        {isLoading ? (
-          <Card className="bg-black border border-white/20 rounded-[15px]">
-            <CardContent className="p-6">
-              <div className="space-y-1">
-                <div className="h-4 w-20 bg-white/10 rounded animate-pulse" />
-                <div className="h-8 w-32 bg-white/10 rounded animate-pulse mt-2" />
-                <div className="h-6 w-24 bg-white/10 rounded animate-pulse mt-2" />
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="bg-black border border-white/20 rounded-[15px]">
-            <CardContent className="p-6">
-              <div className="space-y-1">
-                <p className="text-sm text-white/40">Total Prize Pool</p>
-                <div className="flex flex-col">
-                  <p className="text-3xl font-bold text-white">{formatNumber(events[0]?.prizePool || 0)} PLS</p>
-                  <p className="text-lg text-white/60">${formatNumber(events[0]?.prizePool * (priceData?.price || 0) || 0)}</p>
+          {/* Average Tickets per Entrant Card */}
+          {isLoading ? (
+            <Card className="bg-black border border-white/20 rounded-[15px]">
+              <CardContent className="p-6">
+                <div className="space-y-1">
+                  <div className="h-4 w-20 bg-white/10 rounded animate-pulse" />
+                  <div className="h-8 w-32 bg-white/10 rounded animate-pulse mt-2" />
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="bg-black border border-white/20 rounded-[15px]">
+              <CardContent className="p-6">
+                <div className="space-y-1">
+                  <p className="text-sm text-white/40">Avg. Tickets/Entrant</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-3xl font-bold text-white">
+                      {events.length === 0 ? '0' : (() => {
+                        // Create a map to store total entries per address
+                        const entriesPerAddress = filteredEvents.reduce((acc, event) => {
+                          acc.set(
+                            event.entrant, 
+                            (acc.get(event.entrant) || 0) + Number(event.numEntries)
+                          );
+                          return acc;
+                        }, new Map<string, number>());
+                        
+                        // Calculate average entries per address
+                        const totalAddresses = entriesPerAddress.size;
+                        const values = Array.from(entriesPerAddress.values()) as number[];
+                        const totalEntries = values.reduce((a, b) => a + b, 0);
+                        const average = totalEntries / totalAddresses;
+                        
+                        return formatNumber(Math.round(average));
+                      })()}
+                    </p>
+                    <div className="text-sm text-white/40"></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-      {/* Prize Pool Chart */}
-      <PrizePoolChart events={events} isLoading={isLoading} />
+          {/* Total Tickets Card */}
+          {isLoading ? (
+            <Card className="bg-black border border-white/20 rounded-[15px]">
+              <CardContent className="p-6">
+                <div className="space-y-1">
+                  <div className="h-4 w-20 bg-white/10 rounded animate-pulse" />
+                  <div className="h-8 w-32 bg-white/10 rounded animate-pulse mt-2" />
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="bg-black border border-white/20 rounded-[15px]">
+              <CardContent className="p-6">
+                <div className="space-y-1">
+                  <p className="text-sm text-white/40">Total Tickets</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-3xl font-bold text-white">
+                      {formatNumber(filteredEvents.reduce((sum, event) => sum + Number(event.numEntries), 0))}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-      {/* Entries Table */}
-      <EntriesTable entries={eventsWithTickets} isLoading={isLoading} />
+          {/* Total Prize Pool Card */}
+          {isLoading ? (
+            <Card className="bg-black border border-white/20 rounded-[15px]">
+              <CardContent className="p-6">
+                <div className="space-y-1">
+                  <div className="h-4 w-20 bg-white/10 rounded animate-pulse" />
+                  <div className="h-8 w-32 bg-white/10 rounded animate-pulse mt-2" />
+                  <div className="h-6 w-24 bg-white/10 rounded animate-pulse mt-2" />
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="bg-black border border-white/20 rounded-[15px]">
+              <CardContent className="p-6">
+                <div className="space-y-1">
+                  <p className="text-sm text-white/40">Grand Prize Pool</p>
+                  <div className="flex flex-col">
+                    <p className="text-3xl font-bold text-white">{formatNumber(filteredEvents[0]?.prizePool || 0)} PLS</p>
+                    <p className="text-lg text-white/60">${formatNumber(Number(filteredEvents[0]?.prizePool) * (priceData?.price || 0) || 0)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Prize Per Winner Card */}
+          {isLoading ? (
+            <Card className="bg-black border border-white/20 rounded-[15px]">
+              <CardContent className="p-6">
+                <div className="space-y-1">
+                  <div className="h-4 w-20 bg-white/10 rounded animate-pulse" />
+                  <div className="h-8 w-32 bg-white/10 rounded animate-pulse mt-2" />
+                  <div className="h-6 w-24 bg-white/10 rounded animate-pulse mt-2" />
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="bg-black border border-white/20 rounded-[15px]">
+              <CardContent className="p-6">
+                <div className="space-y-1">
+                  <p className="text-sm text-white/40">Grand Prize Per Winner</p>
+                  <div className="flex flex-col">
+                    <p className="text-3xl font-bold text-white">{formatNumber(Number(filteredEvents[0]?.prizePool) / 4 || 0)} PLS</p>
+                    <p className="text-lg text-white/60">${formatNumber((Number(filteredEvents[0]?.prizePool) / 4) * (priceData?.price || 0) || 0)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {selectedGame === "all" ? (
+        <GameSummaryGrid 
+          events={events}
+          onGameSelect={handleGameSelect}
+          contract={contract}
+        />
+      ) : (
+        <>
+          <PrizePoolChart events={filteredEvents} isLoading={isLoading} />
+          <EntrantsChart events={filteredEvents} isLoading={isLoading} />
+          <EarlyEntrantsChart events={filteredEvents} isLoading={isLoading} />
+        </>
+      )}
+
+      <EntriesTable 
+        entries={filteredTickets}
+        isLoading={isLoading} 
+        contract={contract}
+        onGameSelect={handleGameSelect}
+        selectedGame={selectedGame}
+      />
     </div>
   );
 } 

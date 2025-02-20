@@ -1,0 +1,43 @@
+1. adoptionBonusPrizePool
+
+2. deadline
+
+3. entrantCount
+
+4. entrants
+
+5. entryAmount
+
+6. gameId
+
+7. getAdoptionBonusPrizePerTeam
+
+8. getNumDigits
+
+9. getNumWinners
+
+10. hasClaimed
+
+11. hasClaimedAdoptionBonus
+
+12. hasLeftoverBeenCleared
+
+13. host
+
+14. isGameOver
+
+15. isPowerOf10OrOne
+
+16. isQualifiedAdoptionBonus
+
+17. isWinner
+
+18. lastTimestamp
+
+19. leaderboard
+
+20. participantRecord
+
+21. prizePerWinner
+
+22. prizePool

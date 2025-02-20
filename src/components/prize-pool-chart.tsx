@@ -14,6 +14,7 @@ interface ChartData {
   timestamp: string;
   prizePool: number;
   prizePoolUsd: number;
+  gameId: string;
 }
 
 interface Props {
@@ -30,18 +31,23 @@ function PrizePoolChart({ events, isLoading }: Props) {
     if (events.length > 0 && priceData?.price) {
       // Process events to create time series data
       const timeSeriesData = events
+        // Events are already filtered by game in the parent component
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
         .map(event => ({
           timestamp: event.timestamp,
           prizePool: parseFloat(event.prizePool),
-          prizePoolUsd: parseFloat(event.prizePool) * priceData.price
+          prizePoolUsd: parseFloat(event.prizePool) * priceData.price,
+          gameId: event.gameId
         }));
 
       setChartData(timeSeriesData);
-      // Add a delay to ensure chart is fully rendered
       setTimeout(() => {
         setIsRendered(true);
       }, 500);
+    } else {
+      // Reset chart data when no events
+      setChartData([]);
+      setIsRendered(true);
     }
   }, [events, priceData?.price]);
 
@@ -51,6 +57,17 @@ function PrizePoolChart({ events, isLoading }: Props) {
       setIsRendered(false);
     }
   }, [isLoading]);
+
+  // If no data, show empty state
+  if (isRendered && chartData.length === 0) {
+    return (
+      <div className="w-full h-[450px] relative py-4">
+        <div className="w-full h-full p-5 border border-white/20 rounded-[15px] flex items-center justify-center">
+          <p className="text-white/40">No prize pool data available for this game</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-[450px] relative py-4">
@@ -77,7 +94,7 @@ function PrizePoolChart({ events, isLoading }: Props) {
             Prize Pool Over Time
           </h2>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 30, right: 20, left: 20, bottom: 30 }}>
+            <LineChart data={chartData} margin={{ top: 30, right: 20, left: 20, bottom: 60 }}>
               <CartesianGrid 
                 strokeDasharray="3 3" 
                 stroke="rgba(136, 136, 136, 0.2)" 
