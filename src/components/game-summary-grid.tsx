@@ -18,27 +18,43 @@ export function GameSummaryGrid({ events, onGameSelect, contract }: GameSummaryG
 
   // Check which games are active
   useEffect(() => {
+    let isMounted = true;
+
     async function checkActiveGames() {
+      if (!contract) return;
+      
       setIsCheckingGames(true);
       const activeStates: { [key: number]: boolean } = {};
       
       for (const gameId of gameIds) {
+        if (!isMounted) break;
+        
         try {
           const isOver = await contract.isGameOver(gameId);
-          activeStates[gameId] = !isOver;
+          if (isMounted) {
+            activeStates[gameId] = !isOver;
+          }
         } catch (error) {
           console.error(`Error checking game ${gameId}:`, error);
-          activeStates[gameId] = false;
+          if (isMounted) {
+            activeStates[gameId] = false;
+          }
         }
       }
       
-      setActiveGames(activeStates);
-      setIsCheckingGames(false);
-      setPreviousGameIds(gameIds);
+      if (isMounted) {
+        setActiveGames(activeStates);
+        setIsCheckingGames(false);
+        setPreviousGameIds(gameIds);
+      }
     }
 
     checkActiveGames();
-  }, [gameIds, contract]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [gameIds.toString(), contract]); // Only re-run when gameIds or contract changes
 
   // Use previous game IDs if we're checking games to prevent flashing
   const displayGameIds = isCheckingGames ? previousGameIds : gameIds;

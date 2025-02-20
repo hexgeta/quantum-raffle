@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 interface Entry {
   gameId: number;
@@ -48,6 +49,7 @@ interface EntriesTableProps {
   contract?: any;
   onGameSelect?: (gameId: string) => void;
   selectedGame: string;
+  onAddressSelect?: (address: string) => void;
 }
 
 // Helper function to format numbers with commas and decimals
@@ -60,7 +62,7 @@ const formatNumber = (value: number | string, decimals: number = 0) => {
 
 const ITEMS_PER_PAGE = 20;
 
-export function EntriesTable({ entries, isLoading, contract, onGameSelect, selectedGame }: EntriesTableProps) {
+export function EntriesTable({ entries, isLoading, contract, onGameSelect, selectedGame, onAddressSelect }: EntriesTableProps) {
   const [isRendered, setIsRendered] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [displayedEntries, setDisplayedEntries] = useState<Entry[]>([]);
@@ -69,6 +71,7 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
   const [hasInitialized, setHasInitialized] = useState(false);
   const { priceData } = useCryptoPrice('PLS');
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   // Get unique game IDs
   const gameIds = [...new Set(entries.map(entry => entry.gameId))].sort((a, b) => a - b);
@@ -239,7 +242,11 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
           />
           {searchQuery && (
             <button
-              onClick={() => setSearchQuery('')}
+              onClick={() => {
+                setSearchQuery('');
+                router.push('/', { scroll: false });
+                onAddressSelect?.('');
+              }}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
             >
               <X className="h-4 w-4" />

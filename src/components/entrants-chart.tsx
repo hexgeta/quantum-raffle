@@ -191,7 +191,7 @@ function EntrantsChart({ events, isLoading, onAddressSelect }: Props) {
                 radius={[2, 2, 0, 0]}
                 isAnimationActive={false}
                 onClick={handleBarClick}
-                style={{ cursor: 'pointer', transition: 'fill 500ms ease-in-out' }}
+                style={{ cursor: 'pointer', transition: 'all 500ms ease-in-out' }}
               />
             </BarChart>
           </ResponsiveContainer>

@@ -8,6 +8,7 @@ import { EntriesTable } from './entries-table';
 import PrizePoolChart from './prize-pool-chart';
 import EntrantsChart from './entrants-chart';
 import EarlyEntrantsChart from './early-entrants-chart';
+import AdoptionBonusChart from './adoption-bonus-chart';
 import { useCryptoPrice } from '@/hooks/use-crypto-price';
 import { GameSummaryGrid } from './game-summary-grid';
 
@@ -17,6 +18,16 @@ const CONTRACT_ABI = [
   {
     "inputs": [{"name": "gameId", "type": "uint256"}],
     "name": "getNumWinners",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "type": "function",
+    "stateMutability": "view"
+  },
+  {
+    "inputs": [
+      {"name": "_gameId", "type": "uint256"},
+      {"name": "_cohortId", "type": "uint256"}
+    ],
+    "name": "getAdoptionBonusPrizePerTeam",
     "outputs": [{"name": "", "type": "uint256"}],
     "type": "function",
     "stateMutability": "view"
@@ -68,13 +79,33 @@ export default function ContractReader() {
   const publicClient = usePublicClient();
   const { priceData } = useCryptoPrice('PLS');
 
-  // Read number of winners for current game
+  // Read number of winners (which equals number of digits in total entries)
   const { data: numWinners, isError: winnersError, isLoading: winnersLoading } = useContractRead({
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
     functionName: 'getNumWinners',
-    args: [BigInt(gameId)],
+    args: [BigInt(selectedGame === "all" ? 1 : selectedGame || 1)],
   });
+
+  // Read adoption bonus prize for current game
+  const { data: adoptionBonus, isError: adoptionError } = useContractRead({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: 'getAdoptionBonusPrizePerTeam',
+    args: [
+      BigInt(selectedGame === "all" ? 1 : selectedGame || 1),
+      BigInt(numWinners ? (Number(numWinners) === 1 ? 2 : Number(numWinners)) : 2)
+    ],
+  });
+
+  // Log adoption bonus changes
+  useEffect(() => {
+    console.log('Adoption bonus updated:', {
+      selectedGame,
+      adoptionBonus: adoptionBonus ? formatEther(adoptionBonus) : null,
+      error: adoptionError
+    });
+  }, [selectedGame, adoptionBonus, adoptionError]);
 
   // Get contract instance
   const contract = {
@@ -372,7 +403,7 @@ export default function ContractReader() {
                   <p className="text-sm text-white/40">Avg. Tickets/Entrant</p>
                   <div className="flex items-baseline gap-2">
                     <p className="text-3xl font-bold text-white">
-                      {events.length === 0 ? '0' : (() => {
+                      {(() => {
                         // Create a map to store total entries per address
                         const entriesPerAddress = filteredEvents.reduce((acc, event) => {
                           acc.set(
@@ -386,7 +417,7 @@ export default function ContractReader() {
                         const totalAddresses = entriesPerAddress.size;
                         const values = Array.from(entriesPerAddress.values()) as number[];
                         const totalEntries = values.reduce((a, b) => a + b, 0);
-                        const average = totalEntries / totalAddresses;
+                        const average = totalAddresses > 0 ? totalEntries / totalAddresses : 0;
                         
                         return formatNumber(Math.round(average));
                       })()}
@@ -440,8 +471,8 @@ export default function ContractReader() {
                 <div className="space-y-1">
                   <p className="text-sm text-white/40">Grand Prize Pool</p>
                   <div className="flex flex-col">
-                    <p className="text-3xl font-bold text-white">{formatNumber(filteredEvents[0]?.prizePool || 0)} PLS</p>
-                    <p className="text-lg text-white/60">${formatNumber(Number(filteredEvents[0]?.prizePool) * (priceData?.price || 0) || 0)}</p>
+                    <p className="text-3xl font-bold text-white">{formatNumber(Number(filteredEvents[0]?.prizePool || 0))} PLS</p>
+                    <p className="text-lg text-white/60">${formatNumber(Number(filteredEvents[0]?.prizePool || 0) * (priceData?.price || 0))}</p>
                   </div>
                 </div>
               </CardContent>
@@ -465,13 +496,51 @@ export default function ContractReader() {
                 <div className="space-y-1">
                   <p className="text-sm text-white/40">Grand Prize Per Winner</p>
                   <div className="flex flex-col">
-                    <p className="text-3xl font-bold text-white">{formatNumber(Number(filteredEvents[0]?.prizePool) / 4 || 0)} PLS</p>
-                    <p className="text-lg text-white/60">${formatNumber((Number(filteredEvents[0]?.prizePool) / 4) * (priceData?.price || 0) || 0)}</p>
+                    <p className="text-3xl font-bold text-white">{formatNumber(Number(filteredEvents[0]?.prizePool || 0) / 4)} PLS</p>
+                    <p className="text-lg text-white/60">${formatNumber((Number(filteredEvents[0]?.prizePool || 0) / 4) * (priceData?.price || 0))}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           )}
+
+          {/* Adoption Bonus Prize Pool Card */}
+          {selectedGame !== "all" && (isLoading ? (
+            <Card className="bg-black border border-white/20 rounded-[15px]">
+              <CardContent className="p-6">
+                <div className="space-y-1">
+                  <div className="h-4 w-20 bg-white/10 rounded animate-pulse" />
+                  <div className="h-8 w-32 bg-white/10 rounded animate-pulse mt-2" />
+                  <div className="h-6 w-24 bg-white/10 rounded animate-pulse mt-2" />
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="bg-black border border-white/20 rounded-[15px]">
+              <CardContent className="p-6">
+                <div className="space-y-1">
+                  <p className="text-sm text-white/40">Adoption Bonus Pool</p>
+                  <div className="flex flex-col">
+                    {(() => {
+                      // Calculate total deposits for this game
+                      const totalDeposits = filteredEvents.reduce((sum, event) => 
+                        sum + Number(event.entryAmount), 0
+                      );
+                      // Adoption bonus is 20% of total deposits (1/5)
+                      const adoptionBonus = totalDeposits / 5;
+                      
+                      return (
+                        <>
+                          <p className="text-3xl font-bold text-white">{formatNumber(adoptionBonus)} PLS</p>
+                          <p className="text-lg text-white/60">${formatNumber(adoptionBonus * (priceData?.price || 0))}</p>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
 
@@ -486,6 +555,7 @@ export default function ContractReader() {
           <PrizePoolChart events={filteredEvents} isLoading={isLoading} />
           <EntrantsChart events={filteredEvents} isLoading={isLoading} />
           <EarlyEntrantsChart events={filteredEvents} isLoading={isLoading} />
+          <AdoptionBonusChart events={filteredEvents} isLoading={isLoading} />
         </>
       )}
 
@@ -495,6 +565,10 @@ export default function ContractReader() {
         contract={contract}
         onGameSelect={handleGameSelect}
         selectedGame={selectedGame}
+        onAddressSelect={(address) => {
+          // This will be called when clearing the search
+          // It will propagate to all charts since they use the URL parameter
+        }}
       />
     </div>
   );
