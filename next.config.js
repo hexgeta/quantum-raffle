@@ -5,6 +5,8 @@ const nextConfig = {
     unoptimized: true, // Required for static export
   },
   trailingSlash: true,
+  basePath: '', // Ensure base path is empty for root deployment
+  assetPrefix: './', // Add this for static file references
   webpack: (config) => {
     config.externals.push("pino-pretty");
     config.resolve.fallback = {
