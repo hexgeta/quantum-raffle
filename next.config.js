@@ -6,7 +6,7 @@ const nextConfig = {
   },
   trailingSlash: true,
   basePath: '', // Ensure base path is empty for root deployment
-  assetPrefix: './', // Add this for static file references
+  assetPrefix: '/', // Changed to leading slash for font compatibility
   webpack: (config) => {
     config.externals.push("pino-pretty");
     config.resolve.fallback = {

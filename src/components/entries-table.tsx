@@ -277,7 +277,7 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
                   <TableHead className="text-gray-400 font-800 text-center">Entrant</TableHead>
                   <TableHead className="text-gray-400 font-800 text-center">Entry Amount</TableHead>
                   <TableHead className="text-gray-400 font-800 text-center">Total Spent</TableHead>
-                  <TableHead className="text-gray-400 font-800 text-center">Total Prize Poo</TableHead>
+                  <TableHead className="text-gray-400 font-800 text-center">Total Prize Pool</TableHead>
                   <TableHead className="text-gray-400 font-800 text-center">Winners</TableHead>
                 </TableRow>
               </TableHeader>
