@@ -218,29 +218,6 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
   return (
     <div className="w-full py-4 px-1 xs:px-8">
       <div className="flex items-center gap-4 mb-4">
-        <div className="relative w-[180px]">
-          <Select
-            value={selectedGame}
-            onValueChange={onGameSelect}
-          >
-            <SelectTrigger className="w-full h-10 bg-black text-white border-white/20 rounded-[100px] flex items-center">
-              <SelectValue placeholder="Select Game" />
-            </SelectTrigger>
-            <SelectContent 
-              position="popper" 
-              className="bg-black text-white border-white/20 min-w-[180px] w-[var(--radix-select-trigger-width)]"
-              align="start"
-              sideOffset={4}
-            >
-              <SelectItem value="all">All Games</SelectItem>
-              {gameIds.map((gameId) => (
-                <SelectItem key={gameId} value={gameId.toString()}>
-                  Game {gameId}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
           <Input
