@@ -35,9 +35,11 @@ export function GameSummaryGrid({ events, onGameSelect, contract }: GameSummaryG
             activeStates[gameId] = !isOver;
           }
         } catch (error) {
-          console.error(`Error checking game ${gameId}:`, error);
+          // If the contract call reverts, it means the game is still active
+          // This happens because getNumWinners reverts for active games
+          console.log('Game', gameId, 'is active (getNumWinners reverted)');
           if (isMounted) {
-            activeStates[gameId] = false;
+            activeStates[gameId] = true;
           }
         }
       }
@@ -117,7 +119,7 @@ export function GameSummaryGrid({ events, onGameSelect, contract }: GameSummaryG
           gameId={gameId}
           events={events}
           onSelect={onGameSelect}
-          isActive={activeGames[gameId] || false}
+          contract={contract}
         />
       ))}
     </div>

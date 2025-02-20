@@ -1,11 +1,12 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { useCryptoPrice } from '@/hooks/use-crypto-price';
+import { useGameState } from '@/hooks/use-game-state';
 
 interface GameSummaryCardProps {
   gameId: number;
   events: any[];
   onSelect: (gameId: string) => void;
-  isActive: boolean;
+  contract: any;
 }
 
 // Helper function to format numbers with commas
@@ -19,9 +20,10 @@ export function GameSummaryCard({
   gameId,
   events,
   onSelect,
-  isActive
+  contract
 }: GameSummaryCardProps) {
   const { priceData } = useCryptoPrice('PLS');
+  const { isActive, isLoading } = useGameState(contract, gameId);
   
   // Get game events
   const gameEvents = events.filter(event => event.gameId === gameId);
@@ -73,7 +75,11 @@ export function GameSummaryCard({
 
   return (
     <Card 
-      className={`bg-black border ${isActive ? 'border-[#55FF9F]' : 'border-white/20'} rounded-[15px] cursor-pointer transition-all duration-300 hover:border-white/40`}
+      className={`bg-black border rounded-[15px] cursor-pointer transition-all duration-300 ${
+        isActive 
+          ? 'border-[#55FF9F]/60 hover:border-[#55FF9F]' 
+          : 'border-white/20 hover:border-white/40'
+      }`}
       onClick={() => onSelect(gameId.toString())}
     >
       <CardContent className="p-6">
@@ -82,13 +88,13 @@ export function GameSummaryCard({
           <div className="flex justify-between items-center">
             <div className="flex items-baseline gap-2">
               <h3 className="text-2xl font-bold text-white">Game {gameId}</h3>
-              {isActive ? (
-                <span className="text-[#55FF9F] text-sm bg-[#55FF9F]/10 px-2 py-1 rounded-full">Active</span>
-              ) : (
-                <span className="text-white/40 text-sm bg-white/20 px-2 py-1 rounded-full">Complete</span>
-              )}
+              <div className="text-white/40 text-sm">{durationInDays} days</div>
             </div>
-            <div className="text-white/40 text-sm">{durationInDays} days</div>
+            {isActive ? (
+              <span className="text-[#55FF9F] text-sm bg-[#55FF9F]/10 px-2 py-1 rounded-full">Active</span>
+            ) : (
+              <span className="text-white/40 text-sm bg-white/20 px-2 py-1 rounded-full">Complete</span>
+            )}
           </div>
 
           {/* Prize Pool */}
@@ -112,7 +118,7 @@ export function GameSummaryCard({
 
           {/* Winning Tickets */}
           <div>
-            <p className="text-sm text-white/40 mb-2">Winning Tickets</p>
+            <p className="text-sm text-white/40 mb-2">{isActive ? "Potential Winning Tickets" : "Winning Tickets"}</p>
             <div className="flex flex-wrap gap-2">
               {winningTickets.map((ticket, index) => (
                 <span 

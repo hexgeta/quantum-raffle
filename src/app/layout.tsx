@@ -1,36 +1,30 @@
-'use client';
-
 import { Jura } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "@/components/ui/toaster";
 import Provider from "@/wagmiProvider/provider";
-import { useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { Toaster } from "@/components/ui/toaster";
+import { NavBar } from "@/components/nav-bar";
+import type { Metadata } from 'next';
 
-const jura = Jura({ 
-  subsets: ["latin"],
-  weight: "700"
-});
+const jura = Jura({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  title: 'Quantum Raffle Analytics',
+  description: 'Quantum Raffle Analytics',
+  icons: {
+    icon: '/logo.png',
+  },
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const router = useRouter();
-  const pathname = usePathname();
-
-  useEffect(() => {
-    // Clear UTM parameters on page load
-    if (window.location.search && window.location.search.includes('utm_')) {
-      router.replace(pathname);
-    }
-  }, [pathname, router]);
-
   return (
     <html lang="en">
-      <body className={jura.className}>
+      <body className={`${jura.className} bg-black`}>
         <Provider>
+          <NavBar />
           <main className="min-h-screen bg-black">
             <div className="mx-auto max-w-6xl p-10">
               {children}
