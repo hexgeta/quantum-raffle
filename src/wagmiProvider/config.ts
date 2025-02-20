@@ -2,12 +2,6 @@ import { createConfig, http } from 'wagmi';
 import { pulsechain } from './chainConfig';
 import { createPublicClient, http as viemHttp } from 'viem';
 
-const transport = viemHttp('https://rpc.pulsechain.com');
-const publicClient = createPublicClient({
-  chain: pulsechain,
-  transport,
-});
-
 export const config = createConfig({
   chains: [pulsechain],
   transports: {
@@ -15,5 +9,4 @@ export const config = createConfig({
   },
   syncConnectedChain: true,
   ssr: true,
-  publicClient,
 });
