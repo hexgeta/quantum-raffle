@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { useCryptoPrice } from '@/hooks/use-crypto-price';
 import { useGameState } from '@/hooks/use-game-state';
+import { useRouter } from 'next/navigation';
 
 interface GameSummaryCardProps {
   gameId: number;
@@ -24,6 +25,7 @@ export function GameSummaryCard({
 }: GameSummaryCardProps) {
   const { priceData } = useCryptoPrice('PLS');
   const { isActive, isLoading } = useGameState(contract, gameId);
+  const router = useRouter();
   
   // Get game events
   const gameEvents = events.filter(event => event.gameId === gameId);
@@ -72,6 +74,37 @@ export function GameSummaryCard({
     totalEntries - 99,      // 100th from last
     totalEntries - 999      // 1000th from last
   ].filter(ticket => ticket > 0);  // Only show valid ticket numbers
+
+  // Find the owner of a ticket number
+  const findTicketOwner = (ticketNumber: number) => {
+    let currentTotal = 0;
+    for (const event of sortedEvents) {
+      const newTotal = currentTotal + Number(event.numEntries);
+      if (ticketNumber <= newTotal) {
+        return event.entrant;
+      }
+      currentTotal = newTotal;
+    }
+    return null;
+  };
+
+  // Handle winning ticket click
+  const handleTicketClick = (e: React.MouseEvent, ticketNumber: number) => {
+    e.stopPropagation(); // Prevent card click from triggering
+    const owner = findTicketOwner(ticketNumber);
+    if (owner) {
+      onSelect(gameId.toString());
+      router.push(`?address=${owner}`, { scroll: false });
+      
+      // Wait for the next tick to ensure DOM is updated
+      setTimeout(() => {
+        const heatmapSection = document.getElementById('tickets-heatmap');
+        if (heatmapSection) {
+          heatmapSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    }
+  };
 
   return (
     <Card 
@@ -123,9 +156,13 @@ export function GameSummaryCard({
               {winningTickets.map((ticket, index) => (
                 <span 
                   key={index}
-                  className="px-2 py-1 bg-white/10 rounded-md text-sm text-white"
+                  onClick={(e) => handleTicketClick(e, ticket)}
+                  className="relative px-2 py-1 bg-white/10 rounded-full text-sm text-white cursor-pointer transition-all duration-500 hover:bg-[#8E34EA]/60 hover:border-[#994ee3] hover:text-white border border-transparent overflow-hidden group"
                 >
-                  #{formatNumber(ticket)}
+                  <span className="relative z-10">#{formatNumber(ticket)}</span>
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-100">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#8E34EA]/40 to-transparent animate-shimmer" style={{animationDuration: '1s'}} />
+                  </div>
                 </span>
               ))}
             </div>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ScatterChart, Scatter, XAxis, YAxis, ZAxis, Tooltip, ResponsiveContainer
 } from 'recharts';
+import { useSearchParams } from 'next/navigation';
 
 interface HeatmapData {
   hour: number;
@@ -14,21 +15,31 @@ interface HeatmapData {
 interface Props {
   events: any[];
   isLoading: boolean;
+  onAddressSelect?: (address: string) => void;
 }
 
-function TicketsHeatmapChart({ events, isLoading }: Props) {
+function TicketsHeatmapChart({ events, isLoading, onAddressSelect }: Props) {
   const [chartData, setChartData] = useState<HeatmapData[]>([]);
   const [isRendered, setIsRendered] = useState(false);
   const [maxValue, setMaxValue] = useState(0);
   const [totalDays, setTotalDays] = useState(0);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (events.length > 0) {
+      // Get selected address from URL
+      const selectedAddress = searchParams.get('address');
+      
+      // Filter events if address is selected
+      const filteredEvents = selectedAddress 
+        ? events.filter(event => event.entrant === selectedAddress)
+        : events;
+      
       // Create a map to store tickets by hour and day
       const ticketsByTime = new Map<string, number[]>();
       
       // Get the earliest timestamp to calculate relative days
-      const timestamps = events.map(e => {
+      const timestamps = filteredEvents.map(e => {
         const date = new Date(e.timestamp);
         return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 
                        date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds());
@@ -38,7 +49,7 @@ function TicketsHeatmapChart({ events, isLoading }: Props) {
       startDate.setUTCHours(0, 0, 0, 0); // Normalize to start of UTC day
       
       // Process events to get tickets by hour and day
-      events.forEach(event => {
+      filteredEvents.forEach(event => {
         const date = new Date(event.timestamp);
         const hour = date.getUTCHours();
         const dayDiff = Math.floor((date.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -98,7 +109,7 @@ function TicketsHeatmapChart({ events, isLoading }: Props) {
       setTotalDays(0);
       setIsRendered(true);
     }
-  }, [events]);
+  }, [events, searchParams]);
 
   // Reset rendered state when loading changes
   useEffect(() => {
@@ -133,7 +144,7 @@ function TicketsHeatmapChart({ events, isLoading }: Props) {
   }
 
   return (
-    <div className="w-full h-[450px] relative py-4">
+    <div id="tickets-heatmap" className="w-full h-[450px] relative py-4">
       {(isLoading || !isRendered) ? (
         <div className="w-full h-full p-5 border border-white/20 rounded-[15px]">
           <div className="h-8 w-48 bg-white/10 rounded mb-8 ml-10" />
@@ -152,9 +163,9 @@ function TicketsHeatmapChart({ events, isLoading }: Props) {
           <h2 className="text-left text-white text-2xl mb-0 ml-10">
             Ticket Distribution by Hour (UTC)
           </h2>
-          <ResponsiveContainer width="100%" height="88%">
+          <ResponsiveContainer width="100%" height={`${Math.min(88, 16 + totalDays * 8)}%`}>
             <ScatterChart
-              margin={{ top: 30, right: 40, bottom: 40, left: 80 }}
+              margin={{ top: 30, right: 40, bottom: 20, left: 80 }}
             >
               <XAxis
                 dataKey="hour"
@@ -184,12 +195,12 @@ function TicketsHeatmapChart({ events, isLoading }: Props) {
               <ZAxis
                 dataKey="value"
                 type="number"
-                range={[250, 250]} // Smaller squares for better spacing
+                range={[250, 250]}
                 domain={[0, maxValue]}
               />
               <Tooltip 
                 content={<CustomTooltip />} 
-                cursor={false} // Remove hover highlight completely
+                cursor={false}
               />
               <Scatter
                 data={chartData}
@@ -215,8 +226,8 @@ function TicketsHeatmapChart({ events, isLoading }: Props) {
                     <rect
                       x={cx - width / 2}
                       y={cy - height / 2}
-                      width={width}
-                      height={height}
+                      width={width * 0.8} // Make squares slightly smaller
+                      height={height * 0.8} // Make squares slightly smaller
                       rx={4}
                       ry={4}
                       fill={value === 0 ? 'transparent' : '#55FF9F'}

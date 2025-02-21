@@ -113,12 +113,17 @@ const config = {
   			},
   			'shine': {
   				to: { backgroundPositionX: '-200%' }
+  			},
+  			'shimmer': {
+  				'0%': { transform: 'translateX(-100%)' },
+  				'100%': { transform: 'translateX(100%)' }
   			}
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out',
-  			'shine': 'shine 2s infinite linear'
+  			'shine': 'shine 2s infinite linear',
+  			'shimmer': 'shimmer 2s infinite linear'
   		}
   	}
   },

@@ -600,7 +600,10 @@ export default function ContractReader() {
           <PrizePoolChart events={filteredEvents} isLoading={isLoading} />
           <EntrantsChart events={filteredEvents} isLoading={isLoading} />
           <EarlyEntrantsChart events={filteredEvents} isLoading={isLoading} />
-          <TicketsHeatmapChart events={filteredEvents} isLoading={isLoading} />
+          <TicketsHeatmapChart events={filteredEvents} isLoading={isLoading} onAddressSelect={(address) => {
+            // This will be called when clearing the search
+            // It will propagate to all charts since they use the URL parameter
+          }} />
           {/* <AdoptionBonusChart events={filteredEvents} isLoading={isLoading} /> */}
         </>
       )}

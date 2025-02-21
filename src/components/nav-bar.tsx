@@ -6,7 +6,7 @@ import Link from 'next/link';
 export function NavBar() {
   return (
     <nav className="w-full top-0 bottom-0 border-b border-white/10 bg-black">
-      <div className="mx-auto max-w-6xl px-10 py-4">
+      <div className="mx-auto max-w-6xl px-10 pt-4 pb-6">
         <div className="flex items-center justify-between">
           <Link href="https://quantumraffle.ai/" className="flex items-center space-x-3">
             <Image
