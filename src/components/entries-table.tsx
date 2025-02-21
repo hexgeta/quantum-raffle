@@ -292,13 +292,14 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
               <TableHeader>
                 <TableRow className="border-b border-[#333] hover:bg-transparent">
                   <TableHead className="text-gray-400 font-800 text-center">Game ID</TableHead>
-                  <TableHead className="text-gray-400 font-800 text-center">Block</TableHead>
+                  {/* <TableHead className="text-gray-400 font-800 text-center">Block</TableHead> */}
                   <TableHead className="text-gray-400 font-800 text-center">Time (UTC)</TableHead>
                   <TableHead className="text-gray-400 font-800 text-center">Ticket #</TableHead>
                   <TableHead className="text-gray-400 font-800 text-center">Entrant</TableHead>
                   <TableHead className="text-gray-400 font-800 text-center">Total Entrant Tickets</TableHead>
                   <TableHead className="text-gray-400 font-800 text-center">Total Spent</TableHead>
                   <TableHead className="text-gray-400 font-800 text-center">Total Prize Pool</TableHead>
+                  <TableHead className="text-gray-400 font-800 text-center">Potential Ticket Prize</TableHead>
                   <TableHead className="text-gray-400 font-800 text-center">Potential ROI</TableHead>
                   <TableHead className="text-gray-400 font-800 text-center">Winners</TableHead>
                 </TableRow>
@@ -310,9 +311,6 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
                       <TableRow key={i} className="border-b border-[#333]">
                         <TableCell className="text-center">
                           <div className="h-4 w-16 bg-white/10 rounded animate-pulse mx-auto" />
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="h-4 w-20 bg-white/10 rounded animate-pulse mx-auto" />
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="h-4 w-32 bg-white/10 rounded animate-pulse mx-auto" />
@@ -336,7 +334,7 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
                           <div className="h-8 w-24 bg-white/10 rounded animate-pulse mx-auto" />
                         </TableCell>
                         <TableCell className="text-center">
-                          <div className="h-4 w-16 bg-white/10 rounded animate-pulse mx-auto" />
+                          <div className="h-8 w-24 bg-white/10 rounded animate-pulse mx-auto" />
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="h-4 w-16 bg-white/10 rounded animate-pulse mx-auto" />
@@ -371,7 +369,7 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
                         onClick={() => window.open(`https://scan.mypinata.cloud/ipfs/bafybeih3olry3is4e4lzm7rus5l3h6zrphcal5a7ayfkhzm5oivjro2cp4/#/tx/${entry.transactionHash}`, '_blank')}
                       >
                         <TableCell className="text-white text-center">{formatNumber(entry.gameId)}</TableCell>
-                        <TableCell className="text-white text-center">{formatNumber(entry.blockNumber)}</TableCell>
+                        {/* <TableCell className="text-white text-center">{formatNumber(entry.blockNumber)}</TableCell> */}
                         <TableCell className="text-white text-center">{entry.timestamp}</TableCell>
                         <TableCell className="text-white text-center">{formatNumber(entry.ticketNumber)}</TableCell>
                         <TableCell className="text-white text-center">
@@ -397,8 +395,16 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
                           )}
                         </TableCell>
                         <TableCell className="text-center">
+                          <div className="text-white">{formatNumber(Number(entry.prizePool) / 4)} PLS</div>
+                          {priceData?.price && (
+                            <div className="text-gray-500">
+                              ${formatNumber((Number(entry.prizePool) / 4) * priceData.price, 2)}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
                           <div className="text-white">
-                            {formatNumber((Number(entry.prizePool) / (totalTickets * 200000) - 1) * 100, 0)}%
+                            {formatNumber(((Number(entry.prizePool) / 4) / (totalTickets * 200000) - 1) * 100, 0)}%
                           </div>
                         </TableCell>
                         <TableCell className="text-white text-center">{isWinner ? '🏆' : ''}</TableCell>
