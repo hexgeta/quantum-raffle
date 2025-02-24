@@ -13,6 +13,7 @@ interface ChartData {
   timestamp: string;
   isActive?: boolean;
   fill: string;
+  ticketNumber: number;
 }
 
 interface Props {
@@ -33,18 +34,34 @@ function EarlyEntrantsChart({ events, isLoading, onAddressSelect }: Props) {
 
   useEffect(() => {
     if (events.length > 0) {
-      // Create a map to track first entry per address
-      const firstEntryPerAddress = new Map<string, { timestamp: string, entries: number }>();
-      
       // Sort events by timestamp first
       const sortedEvents = [...events].sort((a, b) => 
         new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
       );
 
-      // Get the first entry for each address
-      sortedEvents.forEach(event => {
-        if (!firstEntryPerAddress.has(event.entrant)) {
-          firstEntryPerAddress.set(event.entrant, {
+      // Create a map for shortened to full addresses
+      const newAddressMap = new Map<string, string>();
+
+      // Get current active address from URL
+      const activeAddress = searchParams.get('address');
+      const hasActiveAddress = !!activeAddress;
+
+      // Track ticket numbers and create entries for each ticket
+      let currentTicketNumber = 1;
+      let ticketData: ChartData[] = [];
+
+      for (const event of sortedEvents) {
+        // For each event, create entries for each ticket
+        for (let i = 0; i < event.numEntries; i++) {
+          if (currentTicketNumber > 50) break; // Only process first 50 tickets
+
+          const shortAddress = `${event.entrant.slice(0, 6)}...${event.entrant.slice(-4)}`;
+          const isActive = event.entrant === activeAddress;
+          newAddressMap.set(shortAddress, event.entrant);
+
+          ticketData.push({
+            entrant: shortAddress,
+            totalEntries: currentTicketNumber <= 9 ? 2000000 : 200000, // PLS value based on ticket number
             timestamp: new Date(event.timestamp).toLocaleString('en-US', { 
               timeZone: 'UTC',
               month: 'numeric',
@@ -54,39 +71,20 @@ function EarlyEntrantsChart({ events, isLoading, onAddressSelect }: Props) {
               minute: '2-digit',
               hour12: true
             }) + ' UTC',
-            entries: Number(event.numEntries)
-          });
-        }
-      });
-
-      // Create a map for shortened to full addresses
-      const newAddressMap = new Map<string, string>();
-
-      // Get current active address from URL
-      const activeAddress = searchParams.get('address');
-      const hasActiveAddress = !!activeAddress;
-
-      // Convert map to array and sort by timestamp
-      const sortedData = Array.from(firstEntryPerAddress.entries())
-        .map(([address, data]) => {
-          const shortAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
-          const isActive = address === activeAddress;
-          newAddressMap.set(shortAddress, address);
-          return {
-            entrant: shortAddress,
-            totalEntries: data.entries,
-            timestamp: data.timestamp,
             isActive,
             fill: hasActiveAddress 
               ? (isActive ? "#55FF9F" : "rgba(85, 255, 159, 0.2)")
-              : "#55FF9F"
-          };
-        })
-        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-        .slice(0, 50);
+              : "#55FF9F",
+            ticketNumber: currentTicketNumber
+          });
+
+          currentTicketNumber++;
+        }
+        if (currentTicketNumber > 50) break;
+      }
 
       setAddressMap(newAddressMap);
-      setChartData(sortedData);
+      setChartData(ticketData);
       
       setTimeout(() => {
         setIsRendered(true);
@@ -179,10 +177,10 @@ function EarlyEntrantsChart({ events, isLoading, onAddressSelect }: Props) {
                 tickLine={{ stroke: '#888', strokeWidth: 0 }}
                 tick={{ fill: '#888', fontSize: 14 }}
                 tickCount={5}
-                domain={[0, 'dataMax']}
+                domain={[0, 2000000]}
                 tickFormatter={(value) => {
                   if (value === 0) return "0";
-                  return `${value.toLocaleString()}`;
+                  return `${(value / 1000000).toFixed(1)}M`;
                 }}
               />
               <Tooltip 
@@ -208,10 +206,12 @@ function EarlyEntrantsChart({ events, isLoading, onAddressSelect }: Props) {
                   return '';
                 }}
                 formatter={(value: any, name: string, props: any) => {
-                  const totalPLS = value * 200000;
+                  // Calculate PLS based on ticket number
+                  const totalPLS = props.payload.ticketNumber <= 9 ? 2000000 : 200000;
                   const totalUSD = totalPLS * (priceData?.price ?? 0);
+                  
                   return [
-                    `${props.payload.entrant}\n${value.toLocaleString()} tickets\n${totalPLS.toLocaleString()} PLS\n$${totalUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                    `${props.payload.entrant}\nTicket #${props.payload.ticketNumber}\n${totalPLS.toLocaleString()} PLS\n$${totalUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                     ''
                   ];
                 }}

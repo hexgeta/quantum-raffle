@@ -12,6 +12,7 @@ interface ChartData {
   totalEntries: number;
   isActive?: boolean;
   fill: string;
+  totalPLS: number;
 }
 
 interface Props {
@@ -46,23 +47,48 @@ function EntrantsChart({ events, isLoading, onAddressSelect }: Props) {
       const activeAddress = searchParams.get('address');
       const hasActiveAddress = !!activeAddress;
 
+      // Sort events by timestamp to calculate ticket numbers correctly
+      const sortedEvents = [...events].sort((a, b) => 
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+
+      // Track ticket numbers per address to calculate total PLS
+      const addressTicketMap = new Map<string, number[]>();
+      let globalTicketNumber = 1;
+
+      // First pass: build ticket number sequences for each address
+      for (const event of sortedEvents) {
+        const tickets = addressTicketMap.get(event.entrant) || [];
+        for (let i = 0; i < event.numEntries; i++) {
+          tickets.push(globalTicketNumber++);
+        }
+        addressTicketMap.set(event.entrant, tickets);
+      }
+
       // Convert map to array and sort by total entries
-      const sortedData = Array.from(entriesPerAddress.entries())
-        .map((entry) => {
-          const [address, totalEntries] = entry as [string, number];
+      const sortedData = Array.from(entriesPerAddress.entries() as Iterable<[string, number]>)
+        .map(([address, totalEntries]) => {
           const shortAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
           const isActive = address === activeAddress;
           newAddressMap.set(shortAddress, address);
+
+          // Calculate total PLS based on ticket numbers
+          const tickets = addressTicketMap.get(address) || [];
+          const totalPLS = tickets.reduce((sum, ticketNum) => 
+            sum + (ticketNum <= 9 ? 2000000 : 200000), 0
+          );
+
           return {
             entrant: shortAddress,
             totalEntries,
             isActive,
             fill: hasActiveAddress 
               ? (isActive ? "#55FF9F" : "rgba(85, 255, 159, 0.2)")
-              : "#55FF9F"
-          };
+              : "#55FF9F",
+            totalPLS
+          } as ChartData;
         })
-        .sort((a, b) => b.totalEntries - a.totalEntries)
+        .sort((a: ChartData, b: ChartData) => b.totalEntries - a.totalEntries)
         .slice(0, 20);
 
       setAddressMap(newAddressMap);
@@ -174,11 +200,12 @@ function EntrantsChart({ events, isLoading, onAddressSelect }: Props) {
                 }}
                 labelStyle={{ color: 'white', marginBottom: '4px' }}
                 itemStyle={{ color: 'white', whiteSpace: 'pre-line' }}
-                formatter={(value: any) => {
-                  const totalPLS = value * 200000;
+                formatter={(value: any, name: string, props: any) => {
+                  const totalPLS = props.payload.totalPLS;
                   const totalUSD = totalPLS * (priceData?.price ?? 0);
+                  
                   return [
-                    `${value.toLocaleString()} tickets\n${totalPLS.toLocaleString()} PLS\n$${totalUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                    `${props.payload.entrant}\n${value.toLocaleString()} tickets\n${totalPLS.toLocaleString()} PLS\n$${totalUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                     ''
                   ];
                 }}

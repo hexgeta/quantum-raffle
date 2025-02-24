@@ -54,8 +54,15 @@ interface EntriesTableProps {
 }
 
 // Helper function to format numbers with commas and decimals
-const formatNumber = (value: number | string, decimals: number = 0) => {
-  return Number(value).toLocaleString('en-US', {
+const formatNumber = (value: number | string, decimals: number = 0, isPLS: boolean = false) => {
+  const num = Number(value);
+  if (isPLS && num >= 1000000) {
+    return (num / 1000000).toLocaleString('en-US', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
+    }) + 'M';
+  }
+  return num.toLocaleString('en-US', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals
   });
@@ -126,13 +133,11 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
   useEffect(() => {
     if (!isLoading && entries.length > 0) {
       // Calculate total tickets per address per game
-      const totalTicketsMap = entries.reduce((acc, entry) => {
+      const ticketCountMap = entries.reduce((acc, entry) => {
         const key = `${entry.entrant}-${entry.gameId}`;
-        // Each entry represents 1 ticket
         acc[key] = (acc[key] || 0) + 1;
         return acc;
       }, {} as { [key: string]: number });
-      setTotalSpentMap(totalTicketsMap);
 
       // First group entries by game ID
       const entriesByGame = entries.reduce((acc, entry) => {
@@ -140,12 +145,7 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
         if (!acc[gameId]) {
           acc[gameId] = [];
         }
-        // Store the original entry
-        acc[gameId].push({
-          ...entry,
-          // Store the per-ticket amount
-          entryAmount: "200000"  // Each ticket is 200,000 PLS
-        });
+        acc[gameId].push(entry);
         return acc;
       }, {} as { [key: number]: typeof entries });
 
@@ -159,11 +159,20 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
           return dateA.getTime() - dateB.getTime();
         });
 
+        // Calculate cumulative prize pool
+        let cumulativePrizePool = 0;
+        
         // Assign sequential ticket numbers starting from 1 for each game
         const numberedEntries = timeOrderedEntries.map((entry, index) => {
+          const ticketNumber = index + 1;
+          // Add this ticket's amount to the prize pool (80% of input)
+          cumulativePrizePool += (ticketNumber <= 9 ? 2000000 : 200000) * 0.8;
+          
           return {
             ...entry,
-            ticketNumber: index + 1,
+            ticketNumber,
+            entryAmount: ticketNumber <= 9 ? "2000000" : "200000",
+            prizePool: Math.floor(cumulativePrizePool).toString(),
             timestamp: new Date(entry.timestamp).toLocaleString('en-US', { 
               timeZone: 'UTC',
               month: 'numeric',
@@ -178,6 +187,20 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
 
         processedEntries = [...processedEntries, ...numberedEntries];
       });
+
+      // Calculate total spent per address per game based on ticket numbers
+      const spentMap = {} as { [key: string]: number };
+      Object.entries(ticketCountMap).forEach(([key, totalTickets]) => {
+        const [entrant, gameId] = key.split('-');
+        // For each address-game combo, calculate total spent based on their ticket numbers
+        const tickets = processedEntries
+          .filter(e => e.entrant === entrant && e.gameId === Number(gameId))
+          .map(e => Number(e.entryAmount))
+          .reduce((sum, amount) => sum + amount, 0);
+        spentMap[key] = tickets;
+      });
+
+      setTotalSpentMap(spentMap);
 
       // Then sort all entries by timestamp in descending order for display
       const sortedEntries = processedEntries.sort((a, b) => {
@@ -298,7 +321,7 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
                   <TableHead className="text-gray-400 font-800 text-center">Entrant</TableHead>
                   <TableHead className="text-gray-400 font-800 text-center">Total Entrant Tickets</TableHead>
                   <TableHead className="text-gray-400 font-800 text-center">Total Spent</TableHead>
-                  <TableHead className="text-gray-400 font-800 text-center">Total Prize Pool</TableHead>
+                  <TableHead className="text-gray-400 font-800 text-center">Total Grand Prize Pool</TableHead>
                   <TableHead className="text-gray-400 font-800 text-center">Potential Ticket Prize</TableHead>
                   <TableHead className="text-gray-400 font-800 text-center">Potential ROI</TableHead>
                   <TableHead className="text-gray-400 font-800 text-center">Winners</TableHead>
@@ -360,12 +383,14 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
                     // Get the pre-calculated total tickets for this address and game
                     const totalTickets = entry.entrant === "0x73fcBecd01912E7f2AB0A708e58B2C059a0f9D90" && entry.gameId === 2
                       ? 65 // Hardcode the exact value we want for this specific address and game
-                      : totalSpentMap[`${entry.entrant}-${entry.gameId}`];
+                      : entries.filter(e => e.entrant === entry.entrant && e.gameId === entry.gameId).length;
+
+                    const totalSpent = totalSpentMap[`${entry.entrant}-${entry.gameId}`];
 
                     return (
                       <TableRow 
                         key={`${entry.transactionHash}-${entry.ticketNumber}`}
-                        className="border-b border-[#333] hover:bg-[#55FF9F]/10 cursor-pointer table-transition"
+                        className="border-b border-[#333] hover:bg-white/10 cursor-pointer table-transition"
                         onClick={() => window.open(`https://scan.mypinata.cloud/ipfs/bafybeih3olry3is4e4lzm7rus5l3h6zrphcal5a7ayfkhzm5oivjro2cp4/#/tx/${entry.transactionHash}`, '_blank')}
                       >
                         <TableCell className="text-white text-center">{formatNumber(entry.gameId)}</TableCell>
@@ -379,15 +404,17 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
                           <div className="text-white">{formatNumber(totalTickets)} tickets</div>
                         </TableCell>
                         <TableCell className="text-center">
-                          <div className="text-white">{formatNumber(totalTickets * 200000)} PLS</div>
+                          <div className="text-white">
+                            {formatNumber(totalSpent, 0, true)} PLS
+                          </div>
                           {priceData?.price && (
                             <div className="text-gray-500">
-                              ${formatNumber(totalTickets * 200000 * priceData.price, 2)}
+                              ${formatNumber(totalSpent * priceData.price, 2)}
                             </div>
                           )}
                         </TableCell>
                         <TableCell className="text-center">
-                          <div className="text-white">{formatNumber(entry.prizePool)} PLS</div>
+                          <div className="text-white">{formatNumber(entry.prizePool, 0, true)} PLS</div>
                           {priceData?.price && (
                             <div className="text-gray-500">
                               ${formatNumber(Number(entry.prizePool) * priceData.price, 2)}
@@ -395,7 +422,7 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
                           )}
                         </TableCell>
                         <TableCell className="text-center">
-                          <div className="text-white">{formatNumber(Number(entry.prizePool) / 4)} PLS</div>
+                          <div className="text-white">{formatNumber(Number(entry.prizePool) / 4, 0, true)} PLS</div>
                           {priceData?.price && (
                             <div className="text-gray-500">
                               ${formatNumber((Number(entry.prizePool) / 4) * priceData.price, 2)}
@@ -404,7 +431,12 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="text-white">
-                            {formatNumber(((Number(entry.prizePool) / 4) / (totalTickets * 200000) - 1) * 100, 0)}%
+                            {(() => {
+                              const potentialPrize = Math.floor(Number(entry.prizePool) / 4);
+                              const totalSpentAmount = totalSpentMap[`${entry.entrant}-${entry.gameId}`];
+                              const roi = Math.floor(((potentialPrize / totalSpentAmount) - 1) * 100);
+                              return formatNumber(roi, 0);
+                            })()}%
                           </div>
                         </TableCell>
                         <TableCell className="text-white text-center">{isWinner ? '🏆' : ''}</TableCell>

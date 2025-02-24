@@ -125,7 +125,6 @@ export default function ContractReader() {
           return true;
         }
         
-        console.log(`Checking isGameOver for Game ${gameId}...`);
         const isOver = await publicClient.readContract({
           address: CONTRACT_ADDRESS,
           abi: CONTRACT_ABI,
@@ -133,21 +132,11 @@ export default function ContractReader() {
           args: [BigInt(gameId)]
         });
         
-        console.log('Game', gameId, 'isGameOver returned:', isOver);
         return isOver;
       } catch (error) {
-        // Log the full error for debugging
-        console.error('Error checking game state for Game', gameId, ':', error);
-        
-        // For Game 1, we know it should be complete
-        if (gameId === 1) {
-          console.log('Game 1 should be complete, returning true');
-          return true;
-        }
-        
-        // For other games, if the call reverts, assume the game is active
-        console.log('Game', gameId, 'call reverted, assuming active');
-        return false;
+        console.error('Error checking game state:', error);
+        // If we can't read the state, assume it's complete for safety
+        return true;
       }
     }
   };
