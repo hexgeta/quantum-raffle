@@ -1877,6 +1877,9 @@ body{
 .ease-linear{
   transition-timing-function: linear;
 }
+.ease-out{
+  transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+}
 @keyframes enter{
   from{
     opacity: var(--tw-enter-opacity, 1);
@@ -1924,6 +1927,9 @@ body{
 }
 .ease-linear{
   animation-timing-function: linear;
+}
+.ease-out{
+  animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
 }
 
 :root {
@@ -2228,10 +2234,6 @@ input::-moz-selection{
   border-color: rgb(255 255 255 / 0.4);
 }
 
-.hover\:bg-\[\#55FF9F\]\/10:hover{
-  background-color: rgb(85 255 159 / 0.1);
-}
-
 .hover\:bg-\[\#8E34EA\]\/60:hover{
   background-color: rgb(142 52 234 / 0.6);
 }
@@ -2282,14 +2284,6 @@ input::-moz-selection{
 
 .hover\:bg-white\/20:hover{
   background-color: rgb(255 255 255 / 0.2);
-}
-
-.hover\:bg-black\/30:hover{
-  background-color: rgb(0 0 0 / 0.3);
-}
-
-.hover\:bg-white\/30:hover{
-  background-color: rgb(255 255 255 / 0.3);
 }
 
 .hover\:text-accent-foreground:hover{

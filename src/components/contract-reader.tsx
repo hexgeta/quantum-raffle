@@ -593,7 +593,7 @@ export default function ContractReader() {
             // This will be called when clearing the search
             // It will propagate to all charts since they use the URL parameter
           }} />
-          {/* <AdoptionBonusChart events={filteredEvents} isLoading={isLoading} /> */}
+          <AdoptionBonusChart events={filteredEvents} isLoading={isLoading} />
         </>
       )}
 

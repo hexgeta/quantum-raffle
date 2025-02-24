@@ -58,8 +58,8 @@ const formatNumber = (value: number | string, decimals: number = 0, isPLS: boole
   const num = Number(value);
   if (isPLS && num >= 1000000) {
     return (num / 1000000).toLocaleString('en-US', {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1
     }) + 'M';
   }
   return num.toLocaleString('en-US', {
