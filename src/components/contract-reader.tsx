@@ -85,8 +85,19 @@ export default function ContractReader() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [clientError, setClientError] = useState<string | null>(null);
   const publicClient = usePublicClient();
   const { priceData } = useCryptoPrice('PLS');
+
+  // Log when publicClient changes
+  useEffect(() => {
+    console.log('PublicClient updated:', publicClient ? 'Available' : 'Not available');
+    if (!publicClient) {
+      setClientError('Blockchain connection not available. Please check your network connection and refresh the page.');
+    } else {
+      setClientError(null);
+    }
+  }, [publicClient]);
 
   // Read number of winners (which equals number of digits in total entries)
   const { data: numWinners, isError: winnersError, isLoading: winnersLoading } = useContractRead({
@@ -270,6 +281,22 @@ export default function ContractReader() {
 
   // Add loading state check
   const isInitializing = isLoading || !hasInitialized || selectedGame === null;
+
+  // Render error state if client error exists
+  if (clientError) {
+    return (
+      <div className="w-full p-6 border border-red-300 bg-red-50 rounded-lg text-red-800">
+        <h2 className="text-xl font-bold mb-2">Connection Error</h2>
+        <p>{clientError}</p>
+        <button 
+          className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          onClick={() => window.location.reload()}
+        >
+          Refresh Page
+        </button>
+      </div>
+    );
+  }
 
   // Loading state UI
   if (isInitializing) {

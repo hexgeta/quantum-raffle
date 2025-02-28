@@ -19,7 +19,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Input } from "@/components/ui/input";
-import { Search, X } from "lucide-react";
+import { Search, X, ExternalLink } from "lucide-react";
 import { useCryptoPrice } from '@/hooks/use-crypto-price';
 import {
   Select,
@@ -42,6 +42,7 @@ interface Entry {
   numEntries: number;
   transactionHash: string;
   totalSpent?: number;
+  numWinners?: number;
 }
 
 interface EntriesTableProps {
@@ -145,7 +146,15 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
   // Update search query when URL parameter changes
   useEffect(() => {
     const address = searchParams.get('address');
-    setSearchQuery(address || '');
+    const filter = searchParams.get('filter');
+    
+    if (filter === '🏆') {
+      setSearchQuery('🏆');
+    } else if (address) {
+      setSearchQuery(address);
+    } else {
+      setSearchQuery('');
+    }
   }, [searchParams]);
 
   // Process and filter entries
@@ -310,7 +319,22 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
           <Input
             placeholder="Search by address / 🏆..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearchQuery(value);
+              
+              // Update URL when typing trophy emoji
+              if (value === '🏆') {
+                router.push(`?filter=🏆`, { scroll: false });
+                onAddressSelect?.('');
+              } else if (value && value.startsWith('0x')) {
+                router.push(`?address=${value}`, { scroll: false });
+                onAddressSelect?.(value);
+              } else if (!value) {
+                router.push('/', { scroll: false });
+                onAddressSelect?.('');
+              }
+            }}
             className="pl-8 pr-8 bg-black text-white border border-white/20 placeholder:text-gray-500 rounded-full command-transition"
           />
           {searchQuery && (
@@ -320,9 +344,9 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
                 router.push('/', { scroll: false });
                 onAddressSelect?.('');
               }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-gray-800 hover:bg-gray-700 rounded-full p-1 text-white transition-colors"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
@@ -330,6 +354,7 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
       <div className="text-gray-400 text-sm mb-4 text-left">
         Each row represents a single raffle ticket
       </div>
+      
       <div className="rounded-lg border border-white/20 rounded-[15px] table-transition overflow-hidden">
         <div className="overflow-x-auto">
           <div className="min-w-[800px]">
@@ -347,6 +372,7 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
                   <TableHead className="text-gray-400 font-800 text-center">Potential Ticket Prize</TableHead>
                   <TableHead className="text-gray-400 font-800 text-center">Potential ROI</TableHead>
                   <TableHead className="text-gray-400 font-800 text-center">Winners</TableHead>
+                  <TableHead className="text-gray-400 font-800 text-center">View TX</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -384,12 +410,15 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
                         <TableCell className="text-center">
                           <div className="h-4 w-16 bg-white/10 rounded animate-pulse mx-auto" />
                         </TableCell>
+                        <TableCell className="text-center">
+                          <div className="h-4 w-16 bg-white/10 rounded animate-pulse mx-auto" />
+                        </TableCell>
                       </TableRow>
                     ))}
                   </>
                 ) : entries.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-4 text-white/40">
+                    <TableCell colSpan={10} className="text-center py-4 text-white/40">
                       No events found
                     </TableCell>
                   </TableRow>
@@ -412,8 +441,15 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
                     return (
                       <TableRow 
                         key={`${entry.transactionHash}-${entry.ticketNumber}`}
-                        className="border-b border-[#333] hover:bg-white/10 cursor-pointer table-transition"
-                        onClick={() => window.open(`https://scan.mypinata.cloud/ipfs/bafybeih3olry3is4e4lzm7rus5l3h6zrphcal5a7ayfkhzm5oivjro2cp4/#/tx/${entry.transactionHash}`, '_blank')}
+                        className={`border-b border-[#333] hover:bg-white/10 cursor-pointer table-transition ${
+                          searchQuery && entry.entrant.toLowerCase() === searchQuery.toLowerCase() ? 'bg-white/5' : ''
+                        }`}
+                        onClick={() => {
+                          // Always filter by address when clicking on a row
+                          router.push(`?address=${entry.entrant}`, { scroll: false });
+                          setSearchQuery(entry.entrant);
+                          onAddressSelect?.(entry.entrant);
+                        }}
                       >
                         <TableCell className="text-white text-center">{formatNumber(entry.gameId)}</TableCell>
                         {/* <TableCell className="text-white text-center">{formatNumber(entry.blockNumber)}</TableCell> */}
@@ -444,24 +480,50 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
                           )}
                         </TableCell>
                         <TableCell className="text-center">
-                          <div className="text-white">{formatNumber(Number(entry.prizePool) / 4, 0, true)} PLS</div>
+                          <div className="text-white">{formatNumber(Number(entry.prizePool) / (entry.numWinners || 4), 0, true)} PLS</div>
                           {priceData?.price && (
                             <div className="text-gray-500">
-                              ${formatNumber((Number(entry.prizePool) / 4) * priceData.price, 2)}
+                              ${formatNumber((Number(entry.prizePool) / (entry.numWinners || 4)) * priceData.price, 2)}
                             </div>
                           )}
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="text-white">
                             {(() => {
-                              const potentialPrize = Math.floor(Number(entry.prizePool) / 4);
+                              const potentialPrize = Math.floor(Number(entry.prizePool) / (entry.numWinners || 4));
                               const totalSpentAmount = totalSpentMap[`${entry.entrant}-${entry.gameId}`];
                               const roi = Math.floor(((potentialPrize / totalSpentAmount) - 1) * 100);
                               return formatNumber(roi, 0);
                             })()}%
                           </div>
                         </TableCell>
-                        <TableCell className="text-white text-center">{isWinner ? '🏆' : ''}</TableCell>
+                        <TableCell className="text-white text-center">
+                          {isWinner ? (
+                            <span 
+                              className="cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevent row click
+                                router.push(`?filter=🏆`, { scroll: false });
+                                setSearchQuery('🏆');
+                                onAddressSelect?.('');
+                              }}
+                              title="Click to show all winners"
+                            >
+                              🏆
+                            </span>
+                          ) : ''}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent row click
+                              window.open(`https://scan.mypinata.cloud/ipfs/bafybeih3olry3is4e4lzm7rus5l3h6zrphcal5a7ayfkhzm5oivjro2cp4/#/tx/${entry.transactionHash}`, '_blank');
+                            }}
+                            className="text-gray-400 hover:text-white transition-colors"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </button>
+                        </TableCell>
                       </TableRow>
                     );
                   })
