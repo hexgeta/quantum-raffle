@@ -12,7 +12,7 @@ import AdoptionBonusChart from './adoption-bonus-chart';
 import TicketsHeatmapChart from './tickets-heatmap-chart';
 import { useCryptoPrice } from '@/hooks/use-crypto-price';
 import { GameSummaryGrid } from './game-summary-grid';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { GameDropdown } from './game-dropdown';
 
 const CONTRACT_ADDRESS = '0x165BAD87E3eF9e1F4FB9b384f2BD1FaBDc414f17';
 
@@ -397,31 +397,11 @@ export default function ContractReader() {
     <div className="space-y-4">
       {/* Game Selection Dropdown */}
       <div className="flex items-center gap-4">
-        <div className="relative w-[180px]">
-          <Select
-            value={selectedGame}
-            onValueChange={handleGameSelect}
-          >
-            <SelectTrigger className="w-full h-10 bg-black text-white border-white/20 rounded-[100px] flex items-center">
-              <SelectValue placeholder="Select Game" />
-            </SelectTrigger>
-            <SelectContent 
-              position="popper" 
-              className="bg-black text-white border-white/20 min-w-[180px] w-[var(--radix-select-trigger-width)]"
-              align="start"
-              sideOffset={4}
-            >
-              <SelectItem value="all">All Games</SelectItem>
-              {[...new Set(events.map(event => event.gameId))]
-                .sort((a, b) => a - b)
-                .map((gameId) => (
-                  <SelectItem key={gameId} value={gameId.toString()}>
-                    Game {gameId}
-                  </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <GameDropdown
+          selectedGame={selectedGame}
+          onGameChange={handleGameSelect}
+          gameIds={[...new Set(events.map(event => event.gameId))]}
+        />
       </div>
 
       {selectedGame !== "all" && (

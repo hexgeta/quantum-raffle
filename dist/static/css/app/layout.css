@@ -749,6 +749,9 @@ body{
 .mt-auto{
   margin-top: auto;
 }
+.mb-10{
+  margin-bottom: 2.5rem;
+}
 .block{
   display: block;
 }
@@ -878,6 +881,9 @@ body{
 }
 .h-\[80px\]{
   height: 80px;
+}
+.h-\[500px\]{
+  height: 500px;
 }
 .max-h-96{
   max-height: 24rem;
@@ -1247,6 +1253,11 @@ body{
   --tw-space-y-reverse: 0;
   margin-top: calc(2rem * calc(1 - var(--tw-space-y-reverse)));
   margin-bottom: calc(2rem * var(--tw-space-y-reverse));
+}
+.space-x-2 > :not([hidden]) ~ :not([hidden]){
+  --tw-space-x-reverse: 0;
+  margin-right: calc(0.5rem * var(--tw-space-x-reverse));
+  margin-left: calc(0.5rem * calc(1 - var(--tw-space-x-reverse)));
 }
 .overflow-auto{
   overflow: auto;
@@ -1672,6 +1683,9 @@ body{
 }
 .pt-4{
   padding-top: 1rem;
+}
+.pb-10{
+  padding-bottom: 2.5rem;
 }
 .text-left{
   text-align: left;
