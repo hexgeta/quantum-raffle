@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Clock, ChevronDown } from "lucide-react";
 
-export type TimeInterval = 'hour' | '10min';
+export type TimeInterval = 'hour' | '30min' | '10min';
 
 interface TimeIntervalFilterProps {
   selectedInterval: TimeInterval;
@@ -30,7 +30,8 @@ export function TimeIntervalFilter({
             size="sm"
           >
             <Clock className="mr-2 h-4 w-4 text-[#55FF9F]" />
-            {selectedInterval === 'hour' ? 'Hourly' : '10 Minutes'}
+            {selectedInterval === 'hour' ? 'Hourly' : 
+             selectedInterval === '30min' ? '30 Minutes' : '10 Minutes'}
             <ChevronDown className="ml-2 h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
@@ -43,6 +44,16 @@ export function TimeIntervalFilter({
               <Clock className="mr-2 h-4 w-4" />
               <span>Hourly</span>
               {selectedInterval === 'hour' && <span className="ml-2 h-2 w-2 rounded-full bg-[#55FF9F]"></span>}
+            </div>
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            className={`hover:bg-white/10 cursor-pointer ${selectedInterval === '30min' ? 'bg-white/20' : ''}`}
+            onClick={() => onIntervalChange('30min')}
+          >
+            <div className="flex items-center">
+              <Clock className="mr-2 h-4 w-4" />
+              <span>30 Minutes</span>
+              {selectedInterval === '30min' && <span className="ml-2 h-2 w-2 rounded-full bg-[#55FF9F]"></span>}
             </div>
           </DropdownMenuItem>
           <DropdownMenuItem 

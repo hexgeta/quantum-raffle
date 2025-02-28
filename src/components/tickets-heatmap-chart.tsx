@@ -82,6 +82,9 @@ function TicketsHeatmapChart({ events, isLoading, onAddressSelect }: Props) {
         let key;
         if (timeInterval === 'hour') {
           key = `${dayDiff}-${hour}`;
+        } else if (timeInterval === '30min') {
+          const halfHour = minute < 30 ? 0 : 30;
+          key = `${dayDiff}-${hour}-${halfHour}`;
         } else { // 10min interval
           const timeSlot = Math.floor(minute / 10); // 0-5 for each hour (0, 10, 20, 30, 40, 50)
           key = `${dayDiff}-${hour}-${timeSlot}`;
@@ -129,6 +132,44 @@ function TicketsHeatmapChart({ events, isLoading, onAddressSelect }: Props) {
               date: formattedDate,
               tickets
             });
+          }
+        }
+      } else if (timeInterval === '30min') {
+        // Create data points for every day, hour, and 30-minute slot
+        for (let day = 0; day < days; day++) {
+          for (let hour = 0; hour < 24; hour++) {
+            for (let halfHour = 0; halfHour < 2; halfHour++) {
+              const minute = halfHour * 30;
+              const key = `${day}-${hour}-${minute}`;
+              const tickets = ticketsByTime.get(key) || [];
+              const value = tickets.length;
+              maxTickets = Math.max(maxTickets, value);
+
+              const date = new Date(startDate.getTime() + day * 24 * 60 * 60 * 1000 + hour * 60 * 60 * 1000 + minute * 60 * 1000);
+              const formattedDate = date.toLocaleString('en-US', {
+                timeZone: 'UTC',
+                month: 'numeric',
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+              }) + ' UTC';
+              
+              // Calculate combined slot (0-47) for the entire day
+              const combinedSlot = hour * 2 + halfHour;
+              
+              heatmapData.push({
+                hour,
+                day,
+                minute,
+                timeSlot: halfHour,
+                combinedSlot,
+                value,
+                date: formattedDate,
+                tickets
+              });
+            }
           }
         }
       } else { // 10min interval
@@ -220,25 +261,24 @@ function TicketsHeatmapChart({ events, isLoading, onAddressSelect }: Props) {
   const formatTimeLabel = (value: number) => {
     if (timeInterval === 'hour') {
       return `${value}h`;
+    } else if (timeInterval === '30min') {
+      // For 30-minute intervals, convert the combined slot (0-47) to hour
+      const hour = Math.floor(value / 2);
+      const minute = (value % 2) * 30;
+      
+      // Only show hour labels when minute is 0
+      if (minute === 0) {
+        return `${hour}h`;
+      }
+      return '';
     } else {
-      // For 10-minute intervals, convert the combined slot (0-143) to hour:minute
+      // For 10-minute intervals, convert the combined slot (0-143) to hour
       const hour = Math.floor(value / 6);
       const minute = (value % 6) * 10;
       
-      // Only show key hours to avoid cluttering
+      // Only show hour labels when minute is 0
       if (minute === 0) {
-        if (isMobile) {
-          // On mobile, show fewer labels
-          if (hour === 0 || hour === 6 || hour === 12 || hour === 18) {
-            return `${hour}:00`;
-          }
-        } else {
-          // On desktop, show more labels
-          if (hour === 0) return '0:00';
-          if (hour === 12) return '12:00';
-          if (hour === 20) return '20:00';
-          if (hour % 4 === 0) return `${hour}:00`;
-        }
+        return `${hour}h`;
       }
       return '';
     }
@@ -263,7 +303,7 @@ function TicketsHeatmapChart({ events, isLoading, onAddressSelect }: Props) {
         <div className="w-full h-full px-10 py-8 border border-white/20 rounded-[15px]">
           <div className="flex justify-between items-center mb-4 ml-10 mr-10">
             <h2 className="text-left text-white text-2xl">
-              Ticket Distribution by {timeInterval === 'hour' ? 'Hour' : '10 Minutes'} (UTC)
+              Ticket Distribution by {timeInterval === 'hour' ? 'Hour' : timeInterval === '30min' ? '30 Minutes' : '10 Minutes'} (UTC)
             </h2>
             <TimeIntervalFilter 
               selectedInterval={timeInterval}
@@ -275,22 +315,27 @@ function TicketsHeatmapChart({ events, isLoading, onAddressSelect }: Props) {
               margin={{ 
                 top: 30, 
                 right: timeInterval === 'hour' ? 40 : 20, 
-                bottom: 20, 
+                bottom: 40, 
                 left: 80 
               }}
             >
               <XAxis
                 dataKey={timeInterval === 'hour' ? 'hour' : 'combinedSlot'}
                 type="number"
-                domain={timeInterval === 'hour' ? [0, 23] : [0, 143]}
-                tickCount={timeInterval === 'hour' ? 24 : (isMobile ? 12 : 24)}
+                domain={timeInterval === 'hour' ? [0, 23] : (timeInterval === '30min' ? [0, 47] : [0, 143])}
                 tick={{ fill: '#888', fontSize: isMobile ? 10 : 12 }}
                 tickFormatter={(value) => formatTimeLabel(value)}
                 orientation="top"
                 axisLine={false}
                 tickLine={false}
                 dy={-12}
-                interval={timeInterval === 'hour' ? 0 : 0}
+                ticks={
+                  timeInterval === 'hour' 
+                    ? Array.from({ length: 24 }, (_, i) => i) 
+                    : timeInterval === '30min'
+                      ? Array.from({ length: 48 }, (_, i) => i).filter(i => i % 2 === 0) // Every hour (0, 2, 4, ...) for 30min
+                      : Array.from({ length: 144 }, (_, i) => i).filter(i => i % 6 === 0) // Every hour (0, 6, 12, ...) for 10min
+                }
               />
               <YAxis
                 dataKey="day"
@@ -338,10 +383,16 @@ function TicketsHeatmapChart({ events, isLoading, onAddressSelect }: Props) {
                   // Calculate size based on time interval and screen size
                   const size = timeInterval === 'hour' 
                     ? 0.8 
-                    : (isMobile ? 0.5 : 0.5);
+                    : (timeInterval === '30min' 
+                      ? (isMobile ? 0.6 : 0.7) 
+                      : (isMobile ? 0.4 : 0.5));
                     
-                  // For 10-minute intervals, make width narrower to prevent overlap
-                  const widthMultiplier = timeInterval === 'hour' ? size : size * 0.5;
+                  // For 10-minute and 30-minute intervals, make width narrower to prevent overlap
+                  const widthMultiplier = timeInterval === 'hour' 
+                    ? size 
+                    : (timeInterval === '30min' 
+                      ? size * 0.7 
+                      : size * 0.5);
                   const heightMultiplier = size;
 
                   return (
@@ -383,4 +434,4 @@ function TicketsHeatmapChart({ events, isLoading, onAddressSelect }: Props) {
   );
 }
 
-export default TicketsHeatmapChart; 
+export default TicketsHeatmapChart;
