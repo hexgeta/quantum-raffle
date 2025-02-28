@@ -18,6 +18,8 @@ interface ChartData {
   gameId: string;
   transactions?: number;
   numEntries?: number;
+  claimableBonus?: number;
+  pendingBonus?: number;
 }
 
 interface Props {
@@ -70,13 +72,17 @@ function PrizePoolChart({ events, isLoading }: Props) {
           globalTicketCount += event.numEntries;
         }
 
-        console.log('Processing event:', {
-          entrant: event.entrant,
-          isFiltered: isFilteredTransaction,
-          amount: transactionAmount,
-          numEntries: event.numEntries,
-          globalTicketCount
-        });
+        // Calculate claimable bonus for Cohort 1 members
+        let claimableBonus = 0;
+        let pendingBonus = 0;
+        if (globalTicketCount >= 99) { // Cohort 2 is filled
+          if (isFilteredTransaction && event.ticketNumber <= 9) {
+            claimableBonus = 800000; // Exact number from spreadsheet
+            pendingBonus = 3100000 / 9; // 3.1M PLS divided by 9 team members
+          } else if (event.ticketNumber >= 10 && event.ticketNumber <= 99) {
+            pendingBonus = 3100000 / 90; // 3.1M PLS divided by 90 team members
+          }
+        }
         
         return {
           timestamp: formattedTime,
@@ -84,7 +90,9 @@ function PrizePoolChart({ events, isLoading }: Props) {
           prizePoolUsd: parseFloat(event.prizePool) * priceData.price,
           gameId: event.gameId,
           transactions: transactionAmount,
-          numEntries: isFilteredTransaction ? event.numEntries : 0
+          numEntries: isFilteredTransaction ? event.numEntries : 0,
+          claimableBonus,
+          pendingBonus
         };
       });
 
@@ -224,7 +232,13 @@ function PrizePoolChart({ events, isLoading }: Props) {
                       })}`
                     ];
                   } else if (name === "Transactions" && value > 0) {
-                    return [`${props.payload.numEntries} tickets purchased\n${value.toLocaleString()} PLS`];
+                    const bonusText = props.payload.claimableBonus > 0 
+                      ? `\nClaimable: ${props.payload.claimableBonus.toLocaleString()} PLS`
+                      : '';
+                    const pendingText = props.payload.pendingBonus > 0
+                      ? `\nPending: ${props.payload.pendingBonus.toLocaleString()} PLS`
+                      : '';
+                    return [`${props.payload.numEntries} tickets purchased\n${value.toLocaleString()} PLS${bonusText}${pendingText}`];
                   }
                   return [''];
                 }}

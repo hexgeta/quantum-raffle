@@ -177,18 +177,20 @@ export default function ContractReader() {
 
         setEvents(formattedEvents);
 
-        // Get unique game IDs and check for active game
-        const gameIds = [...new Set(formattedEvents.map(event => event.gameId))].sort((a, b) => b - a);
+        // Get unique game IDs sorted by most recent first
+        const gameIds = [...new Set(formattedEvents.map(event => event.gameId))]
+          .sort((a, b) => b - a);
         
-        // Set to "all" by default
-        setSelectedGame("all");
+        // Default to most recent game
+        let defaultGame = gameIds[0]?.toString() || "1";
 
         // Check each game starting from the most recent
         for (const gameId of gameIds) {
           try {
             const isOver = await contract.isGameOver(gameId);
             if (!isOver) {
-              // Found an active game, but we'll still show all games by default
+              // Found an active game, use this instead
+              defaultGame = gameId.toString();
               break;
             }
           } catch (error) {
@@ -196,6 +198,7 @@ export default function ContractReader() {
           }
         }
 
+        setSelectedGame(defaultGame);
         setIsLoading(false);
         setHasInitialized(true);
       } catch (error) {
@@ -530,8 +533,24 @@ export default function ContractReader() {
                 <div className="space-y-1">
                   <p className="text-sm text-white/40">Grand Prize Per Winner</p>
                   <div className="flex flex-col">
-                    <p className="text-3xl font-bold text-white">{formatNumber(Number(filteredEvents[0]?.prizePool || 0) / 4)} PLS</p>
-                    <p className="text-lg text-white/60">${formatNumber((Number(filteredEvents[0]?.prizePool || 0) / 4) * (priceData?.price || 0))}</p>
+                    {(() => {
+                      // Get the prize pool and numWinners from the contract data
+                      const prizePool = Number(filteredEvents[0]?.prizePool || 0);
+                      
+                      // Use the numWinners value from the contract data
+                      // This is already being read from the contract in the useContractRead hook
+                      const winnerCount = Number(numWinners || 1);
+                      
+                      // Calculate prize per winner
+                      const prizePerWinner = prizePool / winnerCount;
+                      
+                      return (
+                        <>
+                          <p className="text-3xl font-bold text-white">{formatNumber(prizePerWinner)} PLS</p>
+                          <p className="text-lg text-white/60">${formatNumber(prizePerWinner * (priceData?.price || 0))}</p>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </CardContent>
@@ -593,7 +612,7 @@ export default function ContractReader() {
             // This will be called when clearing the search
             // It will propagate to all charts since they use the URL parameter
           }} />
-          <AdoptionBonusChart events={filteredEvents} isLoading={isLoading} />
+          {/* <AdoptionBonusChart events={filteredEvents} isLoading={isLoading} /> */}
         </>
       )}
 

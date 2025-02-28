@@ -7,6 +7,14 @@ import {
 import { useCryptoPrice } from '@/hooks/use-crypto-price';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+interface Event {
+  timestamp: string;
+  entrant: string;
+  ticketNumber: number;
+  gameId: number;
+  numEntries: number;
+}
+
 interface ChartData {
   entrant: string;
   claimableBonus: number;
@@ -18,6 +26,7 @@ interface ChartData {
   cohortId: number;
   teamId: number;
   ticketNumber: number;
+  gameId: number;
 }
 
 interface Props {
@@ -34,6 +43,7 @@ function getNumDigits(value: number): number {
 function AdoptionBonusChart({ events, isLoading, onAddressSelect }: Props) {
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [isRendered, setIsRendered] = useState(false);
+  const [bonusPoolInfo, setBonusPoolInfo] = useState<{ totalBonus: number; claimablePerTeam1: number }>({ totalBonus: 0, claimablePerTeam1: 0 });
   const { priceData } = useCryptoPrice('PLS');
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -51,7 +61,7 @@ function AdoptionBonusChart({ events, isLoading, onAddressSelect }: Props) {
       });
 
       // Expand events into individual tickets and assign sequential numbers
-      const expandedEvents = [];
+      const expandedEvents: Event[] = [];
       let ticketNumber = 1;
       for (const event of timeOrderedEvents) {
         for (let i = 0; i < event.numEntries; i++) {
@@ -62,6 +72,31 @@ function AdoptionBonusChart({ events, isLoading, onAddressSelect }: Props) {
         }
       }
 
+      // Calculate total deposits and bonus pool info
+      const totalDeposits = expandedEvents.reduce((sum: number, e: Event) => {
+        const ticketCost = e.ticketNumber <= 9 ? 2000000 : 200000;
+        return sum + ticketCost;
+      }, 0);
+      
+      const totalViralBonus = totalDeposits / 5;
+      let displayBonus = totalViralBonus;
+      let displayClaimable = 0;
+
+      if (expandedEvents.length >= 99) {
+        // Calculate claimable based on contract logic
+        const team1Size = 9;
+        const cohort2Deposits = expandedEvents
+          .filter((e: Event) => e.ticketNumber >= 10 && e.ticketNumber <= 99)
+          .reduce((sum: number, e: Event) => sum + 200000, 0);
+        const cohort2Bonus = cohort2Deposits / 5;
+        displayClaimable = cohort2Bonus / team1Size;
+      }
+
+      setBonusPoolInfo({
+        totalBonus: displayBonus,
+        claimablePerTeam1: displayClaimable
+      });
+
       // Create a map for shortened to full addresses
       const newAddressMap = new Map<string, string>();
 
@@ -69,13 +104,8 @@ function AdoptionBonusChart({ events, isLoading, onAddressSelect }: Props) {
       const activeAddress = searchParams.get('address');
       const hasActiveAddress = !!activeAddress;
 
-      // Get total number of entrants and its cohort
-      const totalEntrants = events[events.length - 1]?.entrantCount || 0;
-      const totalEntrantsCohort = getNumDigits(totalEntrants);
-
       // Process each ticket to calculate adoption bonus
       const processedData = expandedEvents.map((event) => {
-        const entrantCohort = getNumDigits(event.ticketNumber);
         const shortAddress = `${event.entrant.slice(0, 6)}...${event.entrant.slice(-4)}`;
         const isActive = event.entrant === activeAddress;
         newAddressMap.set(shortAddress, event.entrant);
@@ -83,35 +113,53 @@ function AdoptionBonusChart({ events, isLoading, onAddressSelect }: Props) {
         let claimableBonus = 0;
         let pendingBonus = 0;
 
-        // Calculate total deposits
-        const totalDeposits = events.reduce((sum, e) => sum + Number(e.entryAmount), 0);
+        // Calculate dynamically per contract logic
+        const entrantCohort = getNumDigits(event.ticketNumber);
+        const totalCohort = getNumDigits(expandedEvents.length);
         
-        // Calculate claimable pool (first 1000 tickets * 0.2)
-        const claimableTickets = Math.min(1000, totalEntrants);
-        const claimablePool = (totalDeposits / totalEntrants) * claimableTickets * 0.2;
-        
-        // Calculate pending pool (tickets above 1000 * 0.2)
-        const pendingTickets = Math.max(0, totalEntrants - 1000);
-        const pendingPool = (totalDeposits / totalEntrants) * pendingTickets * 0.2;
-
-        // Only teams 1 & 2 are eligible for claimable rewards (as team 4 is partially complete)
-        if (entrantCohort <= 2) {
-          // Split claimable pool between 2 teams
-          const teamShare = claimablePool / 2;
-          // Calculate number of members in team
-          const teamSize = Math.pow(10, entrantCohort) - Math.pow(10, entrantCohort - 1);
-          // Individual share
-          claimableBonus = teamShare / teamSize;
+        // Calculate claimable bonus from filled lower cohorts
+        if (event.ticketNumber <= 9 && expandedEvents.length >= 99) {
+          // Calculate Team 1's total deposits (tickets 1-9)
+          const team1Deposits = expandedEvents
+            .filter(e => e.ticketNumber <= 9)
+            .reduce((sum, e) => sum + 2000000, 0);
+          
+          // Calculate Team 2's total deposits (tickets 10-99)
+          const team2Deposits = expandedEvents
+            .filter(e => e.ticketNumber >= 10 && e.ticketNumber <= 99)
+            .reduce((sum, e) => sum + 200000, 0);
+          
+          // Both teams' bonus pools (20% of deposits)
+          const team1BonusPool = team1Deposits / 5;
+          const team2BonusPool = team2Deposits / 5;
+          
+          // Split total bonus among Team 1 (9 members)
+          claimableBonus = (team1BonusPool + team2BonusPool) / 9;
         }
 
-        // Teams 1, 2, & 3 get pending rewards
-        if (entrantCohort <= 3) {
-          // Split pending pool between 3 teams
-          const teamShare = pendingPool / 3;
-          // Calculate number of members in team
-          const teamSize = Math.pow(10, entrantCohort) - Math.pow(10, entrantCohort - 1);
-          // Individual share
-          pendingBonus = teamShare / teamSize;
+        // Calculate pending bonus from unfilled higher cohorts
+        for (let cohortId = entrantCohort + 1; cohortId <= totalCohort; cohortId++) {
+          // Calculate cohort's bonus pool (20% of deposits for that cohort)
+          const cohortStart = Math.pow(10, cohortId - 1);
+          const cohortEnd = Math.min(expandedEvents.length, Math.pow(10, cohortId) - 1);
+          const cohortDeposits = expandedEvents
+            .filter((e: Event) => e.ticketNumber > cohortStart - 1 && e.ticketNumber <= cohortEnd)
+            .reduce((sum: number, e: Event) => sum + (e.ticketNumber <= 9 ? 2000000 : 200000), 0);
+          
+          const cohortBonusPool = cohortDeposits / 5;
+
+          if (event.ticketNumber <= 9) {
+            // For Team 1, they get half of Team 3's bonus pool
+            if (cohortId === 3) {
+              pendingBonus = cohortBonusPool / 2 / 9; // Half of Team 3's bonus divided by 9 Team 1 members
+            }
+          } else {
+            // For other teams, calculate as before
+            const teamPrize = cohortBonusPool / (cohortId - 1);
+            const teamSize = Math.pow(10, entrantCohort) - Math.pow(10, entrantCohort - 1);
+            const prize = teamPrize / teamSize;
+            pendingBonus += prize;
+          }
         }
 
         return {
@@ -121,10 +169,13 @@ function AdoptionBonusChart({ events, isLoading, onAddressSelect }: Props) {
           totalBonus: claimableBonus + pendingBonus,
           timestamp: event.timestamp,
           isActive,
-          fill: "#55FF9F",
-          cohortId: entrantCohort,
-          teamId: Math.min(entrantCohort, 4),
-          ticketNumber: event.ticketNumber
+          fill: hasActiveAddress 
+            ? (isActive ? "#55FF9F" : "rgba(85, 255, 159, 0.2)")
+            : "#55FF9F",
+          cohortId: event.ticketNumber <= 9 ? 1 : (event.ticketNumber <= 99 ? 2 : 3),
+          teamId: event.ticketNumber <= 9 ? 1 : (event.ticketNumber <= 99 ? 2 : 3),
+          ticketNumber: event.ticketNumber,
+          gameId: event.gameId
         };
       });
 
@@ -147,6 +198,7 @@ function AdoptionBonusChart({ events, isLoading, onAddressSelect }: Props) {
       // Reset chart data when no events
       setChartData([]);
       setAddressMap(new Map());
+      setBonusPoolInfo({ totalBonus: 0, claimablePerTeam1: 0 });
       setIsRendered(true);
     }
   }, [events, searchParams]);
@@ -209,24 +261,13 @@ function AdoptionBonusChart({ events, isLoading, onAddressSelect }: Props) {
         <div className="w-full h-full p-5 border border-white/20 rounded-[15px]">
           <div className="flex flex-col">
             <h2 className="text-left text-white text-2xl mb-0 ml-10">
-              Adoption Bonus Distribution by Team
+              Viral Bonus Distribution by Team
             </h2>
-            {(() => {
-              // Calculate total deposits and adoption bonus pool
-              const totalDeposits = events.reduce((sum, event) => sum + Number(event.entryAmount), 0);
-              const totalAdoptionPool = totalDeposits / 5; // 20% of deposits
-              
-              // Get the last cohort's pool (which could be leftover)
-              const lastCohortId = getNumDigits(events[events.length - 1]?.entrantCount || 0);
-              const lastCohortPool = totalAdoptionPool * (events[events.length - 1]?.numEntries || 0) / events.length;
-              
-              return (
-                <div className="text-sm text-white/60 ml-10 mt-1">
-                  Total Pool: {Math.round(totalAdoptionPool).toLocaleString()} PLS 
-                  {lastCohortPool > 0 && ` • Last Cohort (${lastCohortId}): ${Math.round(lastCohortPool).toLocaleString()} PLS`}
-                </div>
-              );
-            })()}
+            <div className="text-sm text-white/60 ml-10 mt-1">
+              Total Pool: {Math.round(bonusPoolInfo.totalBonus).toLocaleString()} PLS 
+              {bonusPoolInfo.claimablePerTeam1 > 0 && 
+                ` • Claimable per Team 1: ${Math.round(bonusPoolInfo.claimablePerTeam1).toLocaleString()} PLS`}
+            </div>
           </div>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart 
@@ -254,16 +295,17 @@ function AdoptionBonusChart({ events, isLoading, onAddressSelect }: Props) {
                 tickLine={{ stroke: '#888', strokeWidth: 0 }}
                 tick={{ fill: '#888', fontSize: 14 }}
                 tickCount={5}
+                domain={[1000, 'auto']}
                 scale="log"
-                domain={['auto', 'auto']}
+                allowDataOverflow={true}
                 tickFormatter={(value) => {
                   if (value === 0) return "0";
                   if (value >= 1000000) {
                     return `${(value / 1000000).toFixed(1)}M`;
                   } else if (value >= 1000) {
-                    return `${(value / 1000).toFixed(1)}K`;
+                    return `${(value / 1000).toFixed(0)}K`;
                   }
-                  return value.toFixed(0);
+                  return value.toString();
                 }}
               />
               <Tooltip 
@@ -287,7 +329,7 @@ function AdoptionBonusChart({ events, isLoading, onAddressSelect }: Props) {
                   const usdClaimable = claimable * (priceData?.price ?? 0);
                   const usdPending = pending * (priceData?.price ?? 0);
                   return [
-                    `${props.payload.entrant}\nTicket #${props.payload.ticketNumber}\nTeam: ${props.payload.teamId}\n\nClaimable:\n${claimable.toLocaleString()} PLS\n$${usdClaimable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n\nPending:\n${pending.toLocaleString()} PLS\n$${usdPending.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                    `${props.payload.entrant}\nTicket #${props.payload.ticketNumber}\nTeam: ${props.payload.teamId}\n\nClaimable:\n${Math.round(claimable).toLocaleString()} PLS\n$${usdClaimable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n\nPending:\n${Math.round(pending).toLocaleString()} PLS\n$${usdPending.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                     ''
                   ];
                 }}

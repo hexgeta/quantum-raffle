@@ -1,4 +1,4 @@
-import { createConfig, http } from 'wagmi';
+import { createConfig, http, webSocket } from 'wagmi';
 import { pulsechain } from './chainConfig';
 import { createPublicClient, http as viemHttp } from 'viem';
 

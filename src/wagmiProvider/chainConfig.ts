@@ -26,8 +26,14 @@ export const pulsechain = defineChain({
     symbol: 'PLS',
   },
   rpcUrls: {
-    default: { http: ['https://rpc.pulsechain.com'] },
-    public: { http: ['https://rpc.pulsechain.com'] },
+    default: { 
+      http: ['https://rpc.pulsechain.com'],
+      webSocket: ['wss://rpc.pulsechain.com/ws']
+    },
+    public: { 
+      http: ['https://rpc.pulsechain.com'],
+      webSocket: ['wss://rpc.pulsechain.com/ws']
+    },
   },
   blockExplorers: {
     default: { name: 'PulseScan', url: 'https://scan.pulsechain.com' },

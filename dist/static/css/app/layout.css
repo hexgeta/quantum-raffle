@@ -502,6 +502,18 @@ body{
   --tw-contain-paint:  ;
   --tw-contain-style:  ;
 }
+.container{
+  width: 100%;
+  margin-right: auto;
+  margin-left: auto;
+  padding-right: 2rem;
+  padding-left: 2rem;
+}
+@media (min-width: 1400px){
+  .container{
+    max-width: 1400px;
+  }
+}
 .sr-only{
   position: absolute;
   width: 1px;
@@ -730,6 +742,15 @@ body{
 }
 .mt-auto{
   margin-top: auto;
+}
+.ml-2{
+  margin-left: 0.5rem;
+}
+.mb-6{
+  margin-bottom: 1.5rem;
+}
+.mb-10{
+  margin-bottom: 2.5rem;
 }
 .block{
   display: block;
@@ -975,6 +996,9 @@ body{
 .min-w-\[var\(--radix-select-trigger-width\)\]{
   min-width: var(--radix-select-trigger-width);
 }
+.min-w-\[32px\]{
+  min-width: 32px;
+}
 .max-w-6xl{
   max-width: 72rem;
 }
@@ -1073,6 +1097,9 @@ body{
 }
 .select-none{
   user-select: none;
+}
+.resize{
+  resize: both;
 }
 .list-none{
   list-style-type: none;
@@ -1406,6 +1433,10 @@ body{
 .bg-white\/20{
   background-color: rgb(255 255 255 / 0.2);
 }
+.bg-\[\#55FF9F\]{
+  --tw-bg-opacity: 1;
+  background-color: rgb(85 255 159 / var(--tw-bg-opacity));
+}
 .bg-gradient-to-r{
   background-image: linear-gradient(to right, var(--tw-gradient-stops));
 }
@@ -1461,6 +1492,9 @@ body{
 }
 .p-\[1px\]{
   padding: 1px;
+}
+.p-8{
+  padding: 2rem;
 }
 .px-1{
   padding-left: 0.25rem;
@@ -1572,6 +1606,15 @@ body{
 }
 .pt-4{
   padding-top: 1rem;
+}
+.pb-12{
+  padding-bottom: 3rem;
+}
+.pb-10{
+  padding-bottom: 2.5rem;
+}
+.pb-20{
+  padding-bottom: 5rem;
 }
 .text-left{
   text-align: left;
@@ -1723,6 +1766,9 @@ body{
 }
 .text-white\/60{
   color: rgb(255 255 255 / 0.6);
+}
+.text-white\/70{
+  color: rgb(255 255 255 / 0.7);
 }
 .underline-offset-4{
   text-underline-offset: 4px;
@@ -3097,8 +3143,17 @@ input::-moz-selection{
   .sm\:mt-0{
     margin-top: 0px;
   }
+  .sm\:inline{
+    display: inline;
+  }
   .sm\:flex{
     display: flex;
+  }
+  .sm\:h-9{
+    height: 2.25rem;
+  }
+  .sm\:min-w-\[36px\]{
+    min-width: 36px;
   }
   .sm\:max-w-sm{
     max-width: 24rem;
@@ -3133,6 +3188,10 @@ input::-moz-selection{
   }
   .sm\:rounded-lg{
     border-radius: var(--radius);
+  }
+  .sm\:px-3{
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
   }
   .sm\:text-left{
     text-align: left;

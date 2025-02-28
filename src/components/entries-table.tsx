@@ -78,6 +78,7 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
   const [filteredEntries, setFilteredEntries] = useState<Entry[]>([]);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [totalSpentMap, setTotalSpentMap] = useState<{[key: string]: number}>({});
+  const [isMobileView, setIsMobileView] = useState(false);
   const { priceData } = useCryptoPrice('PLS');
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -96,6 +97,24 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
 
   const totalPages = Math.ceil(filteredEntries.length / ITEMS_PER_PAGE);
   const maxVisiblePages = 5;
+
+  // Update mobile view state on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileView(window.innerWidth < 640);
+    };
+    
+    // Set initial value
+    handleResize();
+    
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   // Set initial game selection based on active game or most recent
   useEffect(() => {
@@ -266,11 +285,14 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
 
   const getVisiblePages = () => {
     const pages = [];
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    // Use fewer visible pages on mobile
+    const visiblePages = isMobileView ? 3 : maxVisiblePages;
+    
+    let startPage = Math.max(1, currentPage - Math.floor(visiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + visiblePages - 1);
 
-    if (endPage - startPage + 1 < maxVisiblePages) {
-      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    if (endPage - startPage + 1 < visiblePages) {
+      startPage = Math.max(1, endPage - visiblePages + 1);
     }
 
     for (let i = startPage; i <= endPage; i++) {
@@ -451,13 +473,13 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
       </div>
       
       {!isLoading && entries.length > 0 && (
-        <div className="mt-4">
-          <Pagination>
-            <PaginationContent>
+        <div className="mt-4 flex justify-center">
+          <Pagination className="w-full max-w-md">
+            <PaginationContent className="flex flex-wrap justify-center gap-1 xs:gap-2">
               <PaginationItem>
                 <PaginationPrevious 
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  className={`text-white hover:bg-white/10 ${currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
+                  className={`text-white hover:bg-white/10 text-sm px-2 sm:px-3 py-1 ${currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
                 />
               </PaginationItem>
               
@@ -466,25 +488,27 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
                   <PaginationLink
                     onClick={() => setCurrentPage(pageNum)}
                     isActive={currentPage === pageNum}
-                    className={`text-white hover:bg-white/10 ${currentPage === pageNum ? 'bg-white/20 border-white/20' : ''}`}
+                    className={`text-white hover:bg-white/10 min-w-[32px] h-8 sm:min-w-[36px] sm:h-9 text-sm ${currentPage === pageNum ? 'bg-white/20 border-white/20' : ''}`}
                   >
                     {pageNum}
                   </PaginationLink>
                 </PaginationItem>
               ))}
               
-              {getVisiblePages()[getVisiblePages().length - 1] < totalPages - 1 && (
+              {/* Only show ellipsis on non-mobile or if there's significant gap */}
+              {getVisiblePages()[getVisiblePages().length - 1] < totalPages - (isMobileView ? 2 : 1) && (
                 <PaginationItem>
                   <PaginationEllipsis className="text-white" />
                 </PaginationItem>
               )}
               
-              {getVisiblePages()[getVisiblePages().length - 1] < totalPages && (
+              {/* Only show last page if it's not already in visible pages or on mobile with enough pages */}
+              {(getVisiblePages()[getVisiblePages().length - 1] < totalPages && (!isMobileView || totalPages > 5)) && (
                 <PaginationItem>
                   <PaginationLink
                     onClick={() => setCurrentPage(totalPages)}
                     isActive={currentPage === totalPages}
-                    className={`text-white hover:bg-white/10 ${currentPage === totalPages ? 'bg-white/20 border-white/20' : ''}`}
+                    className={`text-white hover:bg-white/10 min-w-[32px] h-8 sm:min-w-[36px] sm:h-9 text-sm ${currentPage === totalPages ? 'bg-white/20 border-white/20' : ''}`}
                   >
                     {totalPages}
                   </PaginationLink>
@@ -494,7 +518,7 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
               <PaginationItem>
                 <PaginationNext 
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  className={`text-white hover:bg-white/10 ${currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
+                  className={`text-white hover:bg-white/10 text-sm px-2 sm:px-3 py-1 ${currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
                 />
               </PaginationItem>
             </PaginationContent>
