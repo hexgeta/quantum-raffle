@@ -8,9 +8,6 @@ export function NavBar() {
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   
-  // You can adjust the navbar height by changing this value (in pixels)
-  const NAVBAR_HEIGHT = 120; // Fixed navbar height
-  
   useEffect(() => {
     setMounted(true);
     
@@ -23,14 +20,7 @@ export function NavBar() {
   }, []);
 
   return (
-    <nav className={`w-full fixed top-0 z-50 transition-all duration-300 
-      h-[${NAVBAR_HEIGHT}px] flex items-center
-      ${
-      // Only change background opacity on scroll, not the height
-      scrolled 
-        ? 'bg-black md:bg-black/50 md:backdrop-blur-md border-b border-white/10' 
-        : 'bg-black border-b border-white/10'
-    }`}>
+    <nav className={`w-full fixed top-0 z-50 transition-all duration-300 h-[30px] flex items-center bg-black/10 backdrop-blur-xl border-b border-white/10"
       <div className="mx-auto max-w-6xl px-10 w-full">
         <div className="flex items-center justify-between">
           <Link href="https://quantumraffle.ai/" className="flex items-center space-x-3">
