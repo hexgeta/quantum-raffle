@@ -2,11 +2,36 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 export function NavBar() {
+  const [mounted, setMounted] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  
+  // You can adjust the navbar height by changing this value (in pixels)
+  const NAVBAR_HEIGHT = 120; // Fixed navbar height
+  
+  useEffect(() => {
+    setMounted(true);
+    
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 10);
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <nav className="w-full top-0 bottom-0 border-b border-white/10 bg-black">
-      <div className="mx-auto max-w-6xl px-10 pt-4 pb-6">
+    <nav className={`w-full fixed top-0 z-50 transition-all duration-300 
+      h-[${NAVBAR_HEIGHT}px] flex items-center
+      ${
+      // Only change background opacity on scroll, not the height
+      scrolled 
+        ? 'bg-black md:bg-black/50 md:backdrop-blur-md border-b border-white/10' 
+        : 'bg-black border-b border-white/10'
+    }`}>
+      <div className="mx-auto max-w-6xl px-10 w-full">
         <div className="flex items-center justify-between">
           <Link href="https://quantumraffle.ai/" className="flex items-center space-x-3">
             <Image
@@ -21,12 +46,25 @@ export function NavBar() {
           
           <Link 
             href="https://quantumraffle.ai/" 
-            className="hidden md:block px-6 py-2 rounded-full bg-gradient-to-r from-purple-600 to-violet-600 text-white font-medium hover:opacity-90 transition-opacity text-center"
+            className="hidden md:flex items-center justify-center px-6 py-2 rounded-full bg-[#8E34EA]/60 text-white font-medium hover:opacity-90 transition-all duration-500 text-center relative overflow-hidden border border-[#994ee3]"
           >
-            Buy Tickets
+            <span className="relative z-10">Buy Tickets</span>
+            <div className="absolute inset-0">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#8E34EA]/40 to-transparent animate-shimmer-slow" />
+            </div>
           </Link>
         </div>
       </div>
+
+      {mounted && (
+        <style jsx global>{`
+          /* Add padding to body to prevent content from being hidden under fixed navbar */
+          /* Adjust this padding-top value to match the navbar height */
+          body {
+            padding-top: ${NAVBAR_HEIGHT}px;
+          }
+        `}</style>
+      )}
     </nav>
   );
 } 

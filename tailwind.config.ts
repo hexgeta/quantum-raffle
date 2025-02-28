@@ -117,13 +117,21 @@ const config = {
   			'shimmer': {
   				'0%': { transform: 'translateX(-100%)' },
   				'100%': { transform: 'translateX(100%)' }
+  			},
+  			'shimmer-slow': {
+  				'0%': { transform: 'translateX(-100%)' },
+  				'30%': { transform: 'translateX(-100%)' },
+  				'50%': { transform: 'translateX(100%)' },
+  				'80%': { transform: 'translateX(100%)' },
+  				'100%': { transform: 'translateX(100%)' }
   			}
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out',
   			'shine': 'shine 2s infinite linear',
-  			'shimmer': 'shimmer 2s infinite linear'
+  			'shimmer': 'shimmer 2s infinite linear',
+  			'shimmer-slow': 'shimmer-slow 8s infinite'
   		}
   	}
   },
