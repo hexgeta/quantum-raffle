@@ -20,7 +20,7 @@ export function NavBar() {
   }, []);
 
   return (
-    <nav className={`w-full fixed top-0 z-50 transition-all duration-300 h-[30px] flex items-center bg-black/10 backdrop-blur-xl border-b border-white/10"
+    <nav className={`w-full fixed top-0 z-50 transition-all duration-300 h-[80px] flex items-center bg-black/60 backdrop-blur border-b border-white/10`}>
       <div className="mx-auto max-w-6xl px-10 w-full">
         <div className="flex items-center justify-between">
           <Link href="https://quantumraffle.ai/" className="flex items-center space-x-3">
@@ -49,9 +49,8 @@ export function NavBar() {
       {mounted && (
         <style jsx global>{`
           /* Add padding to body to prevent content from being hidden under fixed navbar */
-          /* Adjust this padding-top value to match the navbar height */
           body {
-            padding-top: ${NAVBAR_HEIGHT}px;
+            padding-top: 64px; /* 4rem = 64px (h-16) */
           }
         `}</style>
       )}
