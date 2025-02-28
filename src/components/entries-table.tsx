@@ -355,84 +355,115 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
 
   return (
     <div className="w-full py-4 px-1 xs:px-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
-        <div className="relative flex-1 w-full sm:max-w-md">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
-          <Input
-            placeholder="Search by address / 🏆..."
-            value={searchQuery}
-            onChange={(e) => {
-              const value = e.target.value;
-              setSearchQuery(value);
-              
-              // Update URL when typing trophy emoji
-              if (value === '🏆') {
-                updateUrl({filter: '🏆', exclude: exclusionQuery});
-                onAddressSelect?.('');
-              } else if (value && value.startsWith('0x')) {
-                updateUrl({address: value, exclude: exclusionQuery});
-                onAddressSelect?.(value);
-              } else if (!value) {
-                updateUrl({exclude: exclusionQuery});
-                onAddressSelect?.('');
-              }
-            }}
-            className="pl-8 pr-8 bg-black text-white border border-white/20 placeholder:text-gray-500 rounded-full command-transition"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => {
-                setSearchQuery('');
-                updateUrl({exclude: exclusionQuery});
-                onAddressSelect?.('');
-              }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-gray-800 hover:bg-gray-700 rounded-full p-1 text-white transition-colors"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-        
-        <div className="relative flex-1 w-full sm:max-w-md">
-          <Ban className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
-          <Input
-            placeholder="Exclude addresses containing..."
-            value={exclusionQuery}
-            onChange={(e) => {
-              const value = e.target.value;
-              setExclusionQuery(value);
-              
-              // Update URL with exclusion parameter
-              if (searchQuery === '🏆') {
-                updateUrl({filter: '🏆', exclude: value});
-              } else if (searchQuery && searchQuery.startsWith('0x')) {
-                updateUrl({address: searchQuery, exclude: value});
-              } else {
-                updateUrl({exclude: value});
-              }
-            }}
-            className="pl-8 pr-8 bg-black text-white border border-white/20 placeholder:text-gray-500 rounded-full command-transition"
-          />
-          {exclusionQuery && (
-            <button
-              onClick={() => {
-                setExclusionQuery('');
-                if (searchQuery === '🏆') {
-                  updateUrl({filter: '🏆'});
-                } else if (searchQuery && searchQuery.startsWith('0x')) {
-                  updateUrl({address: searchQuery});
-                } else {
-                  updateUrl({});
+      <div className="flex flex-col items-center w-full gap-4 mb-4">
+        <div className="flex w-full items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+            <Input
+              placeholder="Search by address / 🏆..."
+              value={searchQuery}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSearchQuery(value);
+                
+                // Update URL when typing trophy emoji
+                if (value === '🏆') {
+                  updateUrl({filter: '🏆', exclude: exclusionQuery});
+                  onAddressSelect?.('');
+                } else if (value && value.startsWith('0x')) {
+                  updateUrl({address: value, exclude: exclusionQuery});
+                  onAddressSelect?.(value);
+                } else if (!value) {
+                  updateUrl({exclude: exclusionQuery});
+                  onAddressSelect?.('');
                 }
               }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-gray-800 hover:bg-gray-700 rounded-full p-1 text-white transition-colors"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
+              className="pl-8 pr-8 bg-black text-white border border-white/20 placeholder:text-gray-500 rounded-full command-transition"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  updateUrl({exclude: exclusionQuery});
+                  onAddressSelect?.('');
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-gray-800 hover:bg-gray-700 rounded-full p-1 text-white transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          
+          <button
+            onClick={() => {
+              const tempSearch = searchQuery;
+              const tempExclude = exclusionQuery;
+              
+              setSearchQuery(tempExclude);
+              setExclusionQuery(tempSearch);
+              
+              // Update URL with swapped values
+              if (tempExclude === '🏆') {
+                updateUrl({filter: '🏆', exclude: tempSearch});
+                onAddressSelect?.('');
+              } else if (tempExclude && tempExclude.startsWith('0x')) {
+                updateUrl({address: tempExclude, exclude: tempSearch});
+                onAddressSelect?.(tempExclude);
+              } else {
+                updateUrl({exclude: tempSearch});
+                onAddressSelect?.('');
+              }
+            }}
+            className="p-2 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors flex-shrink-0"
+            title="Swap address and exclude values"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 17h16M4 17l4 4M4 17l4-4" />
+              <path d="M20 7H4M20 7l-4 4M20 7l-4-4" />
+            </svg>
+          </button>
+          
+          <div className="relative flex-1">
+            <Ban className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+            <Input
+              placeholder="Exclude addresses containing..."
+              value={exclusionQuery}
+              onChange={(e) => {
+                const value = e.target.value;
+                setExclusionQuery(value);
+                
+                // Update URL with exclusion parameter
+                if (searchQuery === '🏆') {
+                  updateUrl({filter: '🏆', exclude: value});
+                } else if (searchQuery && searchQuery.startsWith('0x')) {
+                  updateUrl({address: searchQuery, exclude: value});
+                } else {
+                  updateUrl({exclude: value});
+                }
+              }}
+              className="pl-8 pr-8 bg-black text-white border border-white/20 placeholder:text-gray-500 rounded-full command-transition"
+            />
+            {exclusionQuery && (
+              <button
+                onClick={() => {
+                  setExclusionQuery('');
+                  if (searchQuery === '🏆') {
+                    updateUrl({filter: '🏆'});
+                  } else if (searchQuery && searchQuery.startsWith('0x')) {
+                    updateUrl({address: searchQuery});
+                  } else {
+                    updateUrl({});
+                  }
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-gray-800 hover:bg-gray-700 rounded-full p-1 text-white transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
-      <div className="text-gray-400 text-sm mb-4 text-left">
+      <div className="text-gray-400 text-sm mb-4 text-left w-full items-center">
         Each row represents a single raffle ticket
       </div>
       

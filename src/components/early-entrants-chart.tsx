@@ -34,17 +34,23 @@ function EarlyEntrantsChart({ events, isLoading, onAddressSelect }: Props) {
 
   useEffect(() => {
     if (events.length > 0) {
+      // Get current active address and excluded address from URL
+      const activeAddress = searchParams.get('address');
+      const excludedAddress = searchParams.get('exclude');
+      const hasActiveAddress = !!activeAddress;
+      
+      // Filter out excluded address if present (with partial matching)
+      const filteredEvents = excludedAddress 
+        ? events.filter(event => !event.entrant.toLowerCase().includes(excludedAddress.toLowerCase()))
+        : events;
+        
       // Sort events by timestamp first
-      const sortedEvents = [...events].sort((a, b) => 
+      const sortedEvents = [...filteredEvents].sort((a, b) => 
         new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
       );
 
       // Create a map for shortened to full addresses
       const newAddressMap = new Map<string, string>();
-
-      // Get current active address from URL
-      const activeAddress = searchParams.get('address');
-      const hasActiveAddress = !!activeAddress;
 
       // Track ticket numbers and create entries for each ticket
       let currentTicketNumber = 1;
@@ -122,7 +128,13 @@ function EarlyEntrantsChart({ events, isLoading, onAddressSelect }: Props) {
           setChartData(updatedChartData);
           
           // Clear the address filter from URL
-          router.push(`?utm_source=filter_feature`, { scroll: false });
+          // Get the current exclude parameter if it exists
+          const excludeParam = searchParams.get('exclude');
+          if (excludeParam) {
+            router.push(`?exclude=${excludeParam}`, { scroll: false });
+          } else {
+            router.push(`/`, { scroll: false });
+          }
           
           // Notify parent component
           onAddressSelect?.('');
@@ -139,7 +151,13 @@ function EarlyEntrantsChart({ events, isLoading, onAddressSelect }: Props) {
           // Update URL with address filter
           const urlParams = new URLSearchParams();
           urlParams.append('address', fullAddress);
-          urlParams.append('utm_source', 'filter_feature');
+          
+          // Preserve exclude parameter if it exists
+          const excludeParam = searchParams.get('exclude');
+          if (excludeParam) {
+            urlParams.append('exclude', excludeParam);
+          }
+          
           router.push(`?${urlParams.toString()}`, { scroll: false });
           
           // Notify parent component

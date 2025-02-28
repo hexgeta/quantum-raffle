@@ -52,13 +52,22 @@ function TicketsHeatmapChart({ events, isLoading, onAddressSelect }: Props) {
 
   useEffect(() => {
     if (events.length > 0) {
-      // Get selected address from URL
+      // Get selected address and excluded address from URL
       const selectedAddress = searchParams.get('address');
+      const excludedAddress = searchParams.get('exclude');
       
-      // Filter events if address is selected
-      const filteredEvents = selectedAddress 
-        ? events.filter(event => event.entrant === selectedAddress)
-        : events;
+      // Filter events based on address parameters
+      let filteredEvents = events;
+      
+      // Apply address filter if present
+      if (selectedAddress) {
+        filteredEvents = filteredEvents.filter(event => event.entrant === selectedAddress);
+      }
+      
+      // Apply exclusion filter if present (with partial matching)
+      if (excludedAddress) {
+        filteredEvents = filteredEvents.filter(event => !event.entrant.toLowerCase().includes(excludedAddress.toLowerCase()));
+      }
       
       // Create a map to store tickets by time
       const ticketsByTime = new Map<string, number[]>();
