@@ -19,7 +19,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Input } from "@/components/ui/input";
-import { Search, X, ExternalLink } from "lucide-react";
+import { Search, X, ExternalLink, Ban } from "lucide-react";
 import { useCryptoPrice } from '@/hooks/use-crypto-price';
 import {
   Select,
@@ -76,6 +76,7 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
   const [currentPage, setCurrentPage] = useState(1);
   const [displayedEntries, setDisplayedEntries] = useState<Entry[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [exclusionQuery, setExclusionQuery] = useState("");
   const [filteredEntries, setFilteredEntries] = useState<Entry[]>([]);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [totalSpentMap, setTotalSpentMap] = useState<{[key: string]: number}>({});
@@ -143,10 +144,11 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
     checkActiveGame();
   }, [entries, contract, gameIds, mostRecentGameId, onGameSelect, hasInitialized]);
 
-  // Update search query when URL parameter changes
+  // Update search and exclusion queries when URL parameters change
   useEffect(() => {
     const address = searchParams.get('address');
     const filter = searchParams.get('filter');
+    const exclude = searchParams.get('exclude');
     
     if (filter === '🏆') {
       setSearchQuery('🏆');
@@ -154,6 +156,12 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
       setSearchQuery(address);
     } else {
       setSearchQuery('');
+    }
+    
+    if (exclude) {
+      setExclusionQuery(exclude);
+    } else {
+      setExclusionQuery('');
     }
   }, [searchParams]);
 
@@ -261,6 +269,20 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
             )
         : sortedEntries;
 
+      // Apply exclusion filter if provided
+      if (exclusionQuery) {
+        // Split by commas to allow multiple exclusion terms
+        const exclusionTerms = exclusionQuery.toLowerCase().split(',').map(term => term.trim()).filter(Boolean);
+        
+        if (exclusionTerms.length > 0) {
+          filtered = filtered.filter(entry => {
+            const entrantLower = entry.entrant.toLowerCase();
+            // Entry is kept if it doesn't match any exclusion term
+            return !exclusionTerms.some(term => entrantLower.includes(term));
+          });
+        }
+      }
+
       // Then filter by game ID if a specific game is selected
       if (selectedGame !== "all") {
         filtered = filtered.filter(entry => entry.gameId === Number(selectedGame));
@@ -278,7 +300,7 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
         setIsRendered(true);
       }, 500);
     }
-  }, [isLoading, entries, currentPage, searchQuery, selectedGame]);
+  }, [isLoading, entries, currentPage, searchQuery, exclusionQuery, selectedGame]);
 
   // Reset rendered state when loading changes
   useEffect(() => {
@@ -287,10 +309,10 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
     }
   }, [isLoading]);
 
-  // Reset to first page when search query changes
+  // Reset to first page when search or exclusion query changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, exclusionQuery]);
 
   const getVisiblePages = () => {
     const pages = [];
@@ -311,10 +333,30 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
     return pages;
   };
 
+  // Helper function to update URL with all parameters
+  const updateUrl = (params: {address?: string, filter?: string, exclude?: string}) => {
+    const urlParams = new URLSearchParams();
+    
+    if (params.filter) {
+      urlParams.append('filter', params.filter);
+    } else if (params.address) {
+      urlParams.append('address', params.address);
+    }
+    
+    if (params.exclude) {
+      urlParams.append('exclude', params.exclude);
+    }
+    
+    // Add UTM parameter for tracking
+    urlParams.append('utm_source', 'filter_feature');
+    
+    router.push(`?${urlParams.toString()}`, { scroll: false });
+  };
+
   return (
     <div className="w-full py-4 px-1 xs:px-8">
-      <div className="flex items-center gap-4 mb-4">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
+        <div className="relative flex-1 w-full sm:max-w-md">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
           <Input
             placeholder="Search by address / 🏆..."
@@ -325,13 +367,13 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
               
               // Update URL when typing trophy emoji
               if (value === '🏆') {
-                router.push(`?filter=🏆`, { scroll: false });
+                updateUrl({filter: '🏆', exclude: exclusionQuery});
                 onAddressSelect?.('');
               } else if (value && value.startsWith('0x')) {
-                router.push(`?address=${value}`, { scroll: false });
+                updateUrl({address: value, exclude: exclusionQuery});
                 onAddressSelect?.(value);
               } else if (!value) {
-                router.push('/', { scroll: false });
+                updateUrl({exclude: exclusionQuery});
                 onAddressSelect?.('');
               }
             }}
@@ -341,8 +383,47 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
             <button
               onClick={() => {
                 setSearchQuery('');
-                router.push('/', { scroll: false });
+                updateUrl({exclude: exclusionQuery});
                 onAddressSelect?.('');
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-gray-800 hover:bg-gray-700 rounded-full p-1 text-white transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+        
+        <div className="relative flex-1 w-full sm:max-w-md">
+          <Ban className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+          <Input
+            placeholder="Exclude addresses containing..."
+            value={exclusionQuery}
+            onChange={(e) => {
+              const value = e.target.value;
+              setExclusionQuery(value);
+              
+              // Update URL with exclusion parameter
+              if (searchQuery === '🏆') {
+                updateUrl({filter: '🏆', exclude: value});
+              } else if (searchQuery && searchQuery.startsWith('0x')) {
+                updateUrl({address: searchQuery, exclude: value});
+              } else {
+                updateUrl({exclude: value});
+              }
+            }}
+            className="pl-8 pr-8 bg-black text-white border border-white/20 placeholder:text-gray-500 rounded-full command-transition"
+          />
+          {exclusionQuery && (
+            <button
+              onClick={() => {
+                setExclusionQuery('');
+                if (searchQuery === '🏆') {
+                  updateUrl({filter: '🏆'});
+                } else if (searchQuery && searchQuery.startsWith('0x')) {
+                  updateUrl({address: searchQuery});
+                } else {
+                  updateUrl({});
+                }
               }}
               className="absolute right-2 top-1/2 -translate-y-1/2 bg-gray-800 hover:bg-gray-700 rounded-full p-1 text-white transition-colors"
             >
@@ -445,10 +526,20 @@ export function EntriesTable({ entries, isLoading, contract, onGameSelect, selec
                           searchQuery && entry.entrant.toLowerCase() === searchQuery.toLowerCase() ? 'bg-white/5' : ''
                         }`}
                         onClick={() => {
-                          // Always filter by address when clicking on a row
-                          router.push(`?address=${entry.entrant}`, { scroll: false });
-                          setSearchQuery(entry.entrant);
-                          onAddressSelect?.(entry.entrant);
+                          // Check if this row is already filtered
+                          const isAlreadyFiltered = searchQuery === entry.entrant;
+                          
+                          if (isAlreadyFiltered) {
+                            // If already filtered, clear the filter
+                            updateUrl({exclude: exclusionQuery});
+                            setSearchQuery('');
+                            onAddressSelect?.('');
+                          } else {
+                            // Filter by this address
+                            updateUrl({address: entry.entrant, exclude: exclusionQuery});
+                            setSearchQuery(entry.entrant);
+                            onAddressSelect?.(entry.entrant);
+                          }
                         }}
                       >
                         <TableCell className="text-white text-center">{formatNumber(entry.gameId)}</TableCell>

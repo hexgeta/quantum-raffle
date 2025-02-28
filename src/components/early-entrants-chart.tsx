@@ -108,13 +108,41 @@ function EarlyEntrantsChart({ events, isLoading, onAddressSelect }: Props) {
     if (data && data.entrant) {
       const fullAddress = addressMap.get(data.entrant);
       if (fullAddress) {
-        if (data.isActive) {
-          // Clear filter
-          router.push('/', { scroll: false });
+        // Check if this bar is already active (already filtered)
+        const isAlreadyActive = chartData.find(item => item.entrant === data.entrant)?.isActive;
+        
+        if (isAlreadyActive) {
+          // If already active, unfilter by clearing the address filter
+          const updatedChartData = chartData.map(item => ({
+            ...item,
+            isActive: false,
+            fill: "#55FF9F"
+          }));
+          
+          setChartData(updatedChartData);
+          
+          // Clear the address filter from URL
+          router.push(`?utm_source=filter_feature`, { scroll: false });
+          
+          // Notify parent component
           onAddressSelect?.('');
         } else {
-          // Set filter
-          router.push(`?address=${fullAddress}`, { scroll: false });
+          // Update the chart data to highlight the selected bar
+          const updatedChartData = chartData.map(item => ({
+            ...item,
+            isActive: item.entrant === data.entrant,
+            fill: item.entrant === data.entrant ? "#55FF9F" : "rgba(85, 255, 159, 0.2)"
+          }));
+          
+          setChartData(updatedChartData);
+          
+          // Update URL with address filter
+          const urlParams = new URLSearchParams();
+          urlParams.append('address', fullAddress);
+          urlParams.append('utm_source', 'filter_feature');
+          router.push(`?${urlParams.toString()}`, { scroll: false });
+          
+          // Notify parent component
           onAddressSelect?.(fullAddress);
         }
       }
